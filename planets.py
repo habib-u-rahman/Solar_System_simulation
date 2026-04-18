@@ -58,7 +58,7 @@ PLANETS = [
     {
         "name": "Neptune", "distance": 48.0, "size": 0.90,
         "color": (0.20, 0.38, 0.98),
-        "speed": 5.4,   "angle": 0.0, "tilt": 28.3,
+        "speed": 5.43,  "angle": 0.0, "tilt": 28.3,
         "spin_speed": 165.0, "spin_angle": 0.0,
     },
 ]
