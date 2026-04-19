@@ -7,7 +7,7 @@ from OpenGL.GLUT import *
 #  Camera state — module-level so every function shares the same values
 # =============================================================================
 
-cam_distance = 60.0   # distance from origin (zoom level)
+cam_distance = 65.0   # distance from origin (zoom level)
 cam_angle_x  = 20.0   # vertical tilt in degrees  (elevation above XZ plane)
 cam_angle_y  = 0.0    # horizontal orbit in degrees (rotation around Y axis)
 paused       = False   # when True, planet movement is frozen
