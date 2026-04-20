@@ -12,7 +12,7 @@ from OpenGL.GLUT import *
 # ---- Stars ------------------------------------------------------------------
 _rng_s = random.Random(42)
 _stars = []
-for _ in range(600):
+for _ in range(650):
     x = _rng_s.uniform(-300, 300)
     y = _rng_s.uniform(-200, 200)
     z = _rng_s.uniform(-300, 300)
