@@ -83,7 +83,7 @@ def draw_hud(planets, cam):
     # ── Info line 1 ──────────────────────────────────────────────────────────
     glColor3f(0.78, 0.78, 0.88)
     glRasterPos2f(14, h - 46)
-    _write12("Planets: 8  |  Press P to Pause  |  R to Reset")
+    _write12("Planets: 8  |  P: Pause/Resume  |  R: Reset Camera")
 
     # ── Info line 2 ──────────────────────────────────────────────────────────
     glColor3f(0.52, 0.52, 0.62)
