@@ -127,7 +127,7 @@ def reshape(width, height):
 def main():
     glutInit()
     glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA | GLUT_DEPTH)
-    glutInitWindowSize(800, 600)
+    glutInitWindowSize(900, 650)
     glutInitWindowPosition(100, 50)
     glutCreateWindow(b"Solar System Simulation | CG Lab Project")
 
