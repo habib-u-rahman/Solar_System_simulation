@@ -41,7 +41,7 @@ PLANETS = [
         "name": "Jupiter", "distance": 24.0, "size": 1.55,
         "color": (0.85, 0.68, 0.48),
         "speed": 13.0,  "angle": 0.0, "tilt": 3.1,
-        "spin_speed": 500.0, "spin_angle": 0.0,  # fastest spinner
+        "spin_speed": 490.0, "spin_angle": 0.0,  # fastest spinner
     },
     {
         "name": "Saturn",  "distance": 32.0, "size": 1.30,
