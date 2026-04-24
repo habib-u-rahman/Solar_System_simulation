@@ -249,7 +249,7 @@ def _draw_atmosphere(planet):
     _bon()
     glDepthMask(GL_FALSE)
     glColor4f(r, g, b, a)
-    glutSolidSphere(planet["size"] * 1.28, 32, 32)
+    glutSolidSphere(planet["size"] * 1.30, 32, 32)
     glDepthMask(GL_TRUE)
     _boff()
     glEnable(GL_LIGHTING)
