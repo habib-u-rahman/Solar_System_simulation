@@ -85,7 +85,7 @@ def special_keys_handler(key, _x, _y):
     """
     global cam_angle_x, cam_angle_y
 
-    STEP = 3.0   # degrees per key press
+    STEP = 2.5   # degrees per key press
 
     if key == GLUT_KEY_UP:
         cam_angle_x = max(-89.0, cam_angle_x - STEP)   # tilt up
