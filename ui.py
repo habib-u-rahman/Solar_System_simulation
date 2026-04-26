@@ -93,7 +93,7 @@ def draw_hud(planets, cam):
     # ── Bottom-left hint ─────────────────────────────────────────────────────
     glColor3f(0.38, 0.38, 0.45)
     glRasterPos2f(14, 14)
-    _write12("Right-click for options")
+    _write12("Right-click for menu options")
 
     # ── PAUSED banner — centred, red ─────────────────────────────────────────
     if cam.paused:
