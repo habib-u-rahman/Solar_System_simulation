@@ -128,7 +128,7 @@ def main():
     glutInit()
     glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA | GLUT_DEPTH)
     glutInitWindowSize(900, 650)
-    glutInitWindowPosition(100, 50)
+    glutInitWindowPosition(150, 60)
     glutCreateWindow(b"Solar System Simulation | CG Lab Project")
 
     glClearColor(0.00, 0.00, 0.02, 1.0)   # very slightly blue-black sky
