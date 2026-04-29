@@ -207,7 +207,7 @@ def _draw_saturn_rings(planet_size):
     bands = [
         (1.45, 1.72, 0.75, 0.68, 0.48, 0.50),   # C ring — dark inner
         (1.72, 2.12, 0.92, 0.84, 0.62, 0.80),   # B ring — brightest
-        (2.12, 2.25, 0.30, 0.28, 0.20, 0.20),   # Cassini division — gap
+        (2.12, 2.28, 0.30, 0.28, 0.20, 0.20),   # Cassini division — gap
         (2.25, 2.58, 0.88, 0.80, 0.58, 0.68),   # A ring — outer
     ]
     segs = 96
