@@ -34,7 +34,7 @@ PLANETS = [
     {
         "name": "Mars",    "distance": 17.0, "size": 0.45,
         "color": (0.85, 0.33, 0.18),
-        "speed": 24.0,  "angle": 0.0, "tilt": 25.2,
+        "speed": 24.0,  "angle": 0.0, "tilt": 25.19,
         "spin_speed": 115.0, "spin_angle": 0.0,
     },
     {
