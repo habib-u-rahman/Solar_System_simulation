@@ -1,0 +1,2561 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Solar System Simulation </title>
+
+  <!-- Emoji favicon — renders 🪐 as the browser tab icon -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🪐</text></svg>" />
+
+  <!-- Open Graph — link previews on social / messaging apps -->
+  <meta property="og:title"       content="Solar System Simulation" />
+  <meta property="og:description" content="Interactive 3D Computer Graphics Project — PyOpenGL &amp; GLUT" />
+  <meta property="og:type"        content="website" />
+
+  <!-- ── Google Fonts ─────────────────────────────────────────────────────
+       Orbitron  : geometric sans-serif with a sci-fi feel — used for all
+                   headings and the logo so they feel "space-age".
+       Exo 2     : clean, versatile humanist font — used for body copy,
+                   subtitles, and UI labels for comfortable reading.
+  ──────────────────────────────────────────────────────────────────────── -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Exo+2:ital,wght@0,300;0,400;0,600;1,300&display=swap" rel="stylesheet" />
+
+  <style>
+    /* ==================================================================
+       1. CSS CUSTOM PROPERTIES — project colour palette
+    ================================================================== */
+    :root {
+      --bg:        #000008;   /* deep space black                        */
+      --bg-navy:   #050520;   /* dark navy — used in radial gradient     */
+      --primary:   #f5a623;   /* sun orange / gold                       */
+      --primary-2: #f02d2d;   /* red — gradient end for launch button    */
+      --secondary: #4fc3f7;   /* planet blue                             */
+      --accent:    #b39ddb;   /* nebula purple                           */
+      --text:      #e0e0e0;   /* default body text                       */
+      --text-dim:  #888aaa;   /* dimmer text for subtitles / captions    */
+      --card-bg:   rgba(255, 255, 255, 0.04);  /* frosted card surface  */
+      --border:    rgba(255, 255, 255, 0.08);  /* subtle card borders   */
+      --nav-bg:    rgba(0, 0, 16, 0.70);       /* nav glass background  */
+    }
+
+    /* ==================================================================
+       2. RESET & BASE
+    ================================================================== */
+    *, *::before, *::after {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;   /* enables smooth anchor navigation     */
+      font-size: 16px;
+    }
+
+    body {
+      font-family: 'Exo 2', sans-serif;
+      background:  var(--bg);
+      /* subtle radial glow from centre so space feels deep, not flat */
+      background-image: radial-gradient(ellipse at 50% 40%,
+                          var(--bg-navy) 0%,
+                          var(--bg)      70%);
+      background-attachment: fixed;
+      color: var(--text);
+      overflow-x: hidden;
+      line-height: 1.6;
+    }
+
+    /* hide scrollbar on webkit while keeping scroll functionality */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: #1a1a40; border-radius: 3px; }
+
+    a { text-decoration: none; color: inherit; }
+    ul { list-style: none; }
+    img { max-width: 100%; }
+
+    /* ==================================================================
+       3. ANIMATED STARFIELD — pure CSS, 3 depth layers
+       ──────────────────────────────────────────────────────────────────
+       Technique (box-shadow star trick):
+         • Each layer is a tiny 1–3 px element whose many box-shadows
+           create the individual star dots across a 2000×2000 px canvas.
+         • The element (and its ::after clone offset by -2000 px) animate
+           downward with translateY(2000px). When one screen-full of stars
+           exits the bottom, the clone seamlessly takes its place from the
+           top — creating an infinite parallax drift.
+         • Three speeds (150 s / 100 s / 50 s) simulate depth: slow stars
+           feel far away, fast stars feel close.
+    ================================================================== */
+
+    /* shared positioning for all three star container divs */
+    .stars-1, .stars-2, .stars-3 {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;   /* clicks pass through to page content   */
+      z-index: 0;
+    }
+
+    /* ── Layer 1 : small dim stars, 1 px, slowest (150 s) ────────── */
+    .stars-1::before, .stars-1::after {
+      content: '';
+      position: absolute;
+      top: 0; left: 0;
+      width: 1px; height: 1px;
+      background: transparent;
+      animation: starDrift 150s linear infinite;
+      box-shadow:
+        45px 120px #fff, 200px 340px #fff, 380px 67px #fff,
+        520px 445px #fff, 700px 210px #fff, 850px 380px #fff,
+        1000px 150px #fff, 1150px 490px #fff, 1300px 80px #fff,
+        1450px 310px #fff, 1600px 200px #fff, 1750px 440px #fff,
+        1900px 120px #fff, 100px 600px #fff, 280px 720px #fff,
+        430px 580px #fff, 600px 700px #fff, 780px 650px #fff,
+        900px 800px #fff, 1050px 550px #fff, 1200px 750px #fff,
+        1380px 620px #fff, 1520px 780px #fff, 1680px 660px #fff,
+        1820px 700px #fff, 50px 950px #fff, 220px 1050px #fff,
+        400px 900px #fff, 570px 1100px #fff, 730px 980px #fff,
+        880px 1150px #fff, 1030px 920px #fff, 1180px 1080px #fff,
+        1350px 960px #fff, 1500px 1120px #fff, 1680px 1000px #fff,
+        1850px 1080px #fff, 120px 1300px #fff, 300px 1250px #fff,
+        480px 1380px #fff, 640px 1280px #fff, 800px 1420px #fff,
+        960px 1300px #fff, 1120px 1480px #fff, 1270px 1350px #fff,
+        1430px 1420px #fff, 1590px 1300px #fff, 1740px 1450px #fff,
+        1910px 1380px #fff, 70px 1600px #fff, 240px 1700px #fff,
+        420px 1650px #fff, 590px 1780px #fff, 760px 1620px #fff,
+        930px 1740px #fff, 1080px 1600px #fff, 1240px 1720px #fff,
+        1400px 1660px #fff, 1560px 1800px #fff, 1720px 1680px #fff,
+        1880px 1750px #fff, 170px 1900px #fff, 350px 1950px #fff,
+        510px 1880px #fff, 680px 1960px #fff, 840px 1920px #fff,
+        1010px 1850px #fff, 1170px 1980px #fff, 1330px 1900px #fff,
+        1490px 1950px #fff, 1650px 1880px #fff, 1810px 1940px #fff,
+        330px 450px #fff, 650px 160px #fff, 960px 430px #fff,
+        1270px 190px #fff, 1580px 380px #fff, 1870px 240px #fff,
+        135px 835px #fff, 465px 1230px #fff, 795px 1530px #fff,
+        1125px 1830px #fff, 1455px 535px #fff, 1785px 1135px #fff,
+        88px 1475px #fff, 418px 275px #fff, 748px 875px #fff,
+        1078px 1475px #fff, 1408px 75px #fff, 1738px 675px #fff;
+    }
+    /* the ::after clone starts 2000 px above, so it enters from the top
+       exactly as ::before exits at the bottom — seamless loop          */
+    .stars-1::after { top: -2000px; }
+
+    /* ── Layer 2 : medium stars, 2 px, medium speed (100 s) ─────── */
+    .stars-2::before, .stars-2::after {
+      content: '';
+      position: absolute;
+      top: 0; left: 0;
+      width: 2px; height: 2px;
+      background: transparent;
+      animation: starDrift 100s linear infinite;
+      box-shadow:
+        100px 100px #fff, 350px 250px #fff, 580px 400px #fff,
+        820px 100px #fff, 1060px 320px #fff, 1280px 450px #fff,
+        1500px 150px #fff, 1750px 300px #fff, 200px 600px #fff,
+        450px 750px #fff, 700px 580px #fff, 940px 720px #fff,
+        1180px 600px #fff, 1420px 780px #fff, 1660px 640px #fff,
+        1900px 720px #fff, 80px 1000px #fff, 320px 1150px #fff,
+        560px 980px #fff, 800px 1120px #fff, 1050px 1050px #fff,
+        1290px 1180px #fff, 1540px 1020px #fff, 1780px 1140px #fff,
+        140px 1400px #fff, 380px 1520px #fff, 630px 1380px #fff,
+        870px 1480px #fff, 1110px 1420px #fff, 1360px 1560px #fff,
+        1600px 1400px #fff, 1840px 1520px #fff, 220px 1800px #fff,
+        480px 1900px #fff, 720px 1750px #fff, 960px 1870px #fff,
+        1200px 1800px #fff, 1440px 1920px #fff, 1680px 1780px #fff,
+        1920px 1860px #fff, 550px 1600px #fff, 1000px 1600px #fff,
+        1450px 1650px #fff, 300px 1350px #fff, 750px 1250px #fff,
+        1200px 1350px #fff, 1650px 1200px #fff, 450px 1700px #fff,
+        900px 1900px #fff, 1350px 1800px #fff;
+    }
+    .stars-2::after { top: -2000px; }
+
+    /* ── Layer 3 : few large bright stars, 3 px, fastest (50 s) ─── */
+    .stars-3::before, .stars-3::after {
+      content: '';
+      position: absolute;
+      top: 0; left: 0;
+      width: 3px; height: 3px;
+      background: transparent;
+      animation: starDrift 50s linear infinite;
+      box-shadow:
+        150px 200px #fff,  500px 100px #e8f4ff, 900px 250px #fff,
+        1300px 150px #ffe8cc, 1700px 200px #fff,  250px 700px #e8f4ff,
+        650px  600px #fff,  1050px 750px #fff,  1450px 650px #ffe8cc,
+        1850px 700px #fff,  100px 1200px #fff,  500px 1100px #e8f4ff,
+        900px 1300px #fff, 1300px 1200px #fff,  1700px 1100px #fff,
+        300px 1700px #fff,  700px 1800px #ffe8cc, 1100px 1750px #fff,
+        1500px 1800px #fff, 1900px 1700px #e8f4ff;
+    }
+    .stars-3::after { top: -2000px; }
+
+    /* single keyframe used by all three layers — each gets its own speed */
+    @keyframes starDrift {
+      from { transform: translateY(0px);    }
+      to   { transform: translateY(2000px); }
+    }
+
+    /* ==================================================================
+       4. NAVIGATION BAR
+       ── Glass-morphism style: semi-transparent dark bg + backdrop blur
+       ── Stays fixed at top so it's always accessible during scroll
+    ================================================================== */
+    .nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 100;
+
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 2.5rem;
+      height: 64px;
+
+      background: var(--nav-bg);
+      backdrop-filter: blur(12px);           /* frosted-glass effect    */
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+    }
+
+    /* logo / brand name on the left */
+    .nav-logo {
+      font-family: 'Orbitron', sans-serif;
+      font-weight: 700;
+      font-size: 1.1rem;
+      color: #fff;
+      letter-spacing: 0.05em;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .nav-logo span { font-size: 1.5rem; }   /* planet emoji             */
+
+    /* right-side navigation links */
+    .nav-links {
+      display: flex;
+      gap: 2rem;
+    }
+    .nav-links a {
+      font-family: 'Exo 2', sans-serif;
+      font-size: 0.9rem;
+      font-weight: 400;
+      color: var(--text-dim);
+      letter-spacing: 0.04em;
+      transition: color 0.25s;
+    }
+    .nav-links a:hover { color: var(--secondary); }
+
+    /* hamburger placeholder for mobile (pure CSS toggle using checkbox) */
+
+    /* ==================================================================
+       5. HERO SECTION — full viewport height landing screen
+    ================================================================== */
+    .hero {
+      position: relative;
+      z-index: 1;
+      min-height: 100vh;
+
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 6rem 1.5rem 3rem;
+    }
+
+    /* decorative slowly-rotating orbital ring behind the title */
+    .hero-orbit {
+      position: absolute;
+      width: min(600px, 90vw);
+      height: min(600px, 90vw);
+      border: 1px solid rgba(79, 195, 247, 0.12);
+      border-radius: 50%;
+      animation: orbitSpin 30s linear infinite;
+      pointer-events: none;
+    }
+    .hero-orbit-2 {
+      width: min(420px, 65vw);
+      height: min(420px, 65vw);
+      border-color: rgba(245, 166, 35, 0.10);
+      animation-duration: 20s;
+      animation-direction: reverse;
+    }
+    @keyframes orbitSpin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* small dot on the orbital ring to suggest a planet */
+    .hero-orbit::before {
+      content: '';
+      position: absolute;
+      top: -4px; left: 50%;
+      width: 8px; height: 8px;
+      background: var(--secondary);
+      border-radius: 50%;
+      box-shadow: 0 0 12px var(--secondary);
+      transform: translateX(-50%);
+    }
+    .hero-orbit-2::before {
+      background: var(--primary);
+      box-shadow: 0 0 12px var(--primary);
+    }
+
+    /* main content wrapper sits above the orbit rings */
+    .hero-content { position: relative; z-index: 2; }
+
+    /* tag line above main title */
+    .hero-tag {
+      font-family: 'Exo 2', sans-serif;
+      font-size: 0.78rem;
+      font-weight: 600;
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+      color: var(--secondary);
+      margin-bottom: 1.2rem;
+      opacity: 0;
+      animation: fadeUp 0.8s 0.2s forwards;
+    }
+
+    /* main display title with gradient fill */
+    .hero-title {
+      font-family: 'Orbitron', sans-serif;
+      font-weight: 900;
+      font-size: clamp(2rem, 6vw, 4.5rem);
+      line-height: 1.1;
+      letter-spacing: 0.04em;
+      background: linear-gradient(135deg, #fff 20%, var(--primary) 60%, var(--primary-2) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 1.2rem;
+      opacity: 0;
+      animation: fadeUp 0.9s 0.4s forwards;
+    }
+
+    /* subtitle line */
+    .hero-subtitle {
+      font-size: clamp(1rem, 2.5vw, 1.25rem);
+      font-weight: 300;
+      color: var(--text-dim);
+      margin-bottom: 0.6rem;
+      opacity: 0;
+      animation: fadeUp 0.9s 0.6s forwards;
+    }
+
+    /* course / institution info */
+    .hero-course {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.82rem;
+      letter-spacing: 0.15em;
+      color: var(--accent);
+      margin-bottom: 2.8rem;
+      opacity: 0;
+      animation: fadeUp 0.9s 0.8s forwards;
+    }
+
+    /* hero entrance animation used by all child elements */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(24px); }
+      to   { opacity: 1; transform: translateY(0);    }
+    }
+
+    /* scroll-down hint at bottom of hero */
+    .hero-scroll-hint {
+      position: absolute;
+      bottom: 2rem;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.4rem;
+      color: var(--text-dim);
+      font-size: 0.75rem;
+      letter-spacing: 0.1em;
+      opacity: 0;
+      animation: fadeUp 1s 1.8s forwards;
+    }
+    .scroll-arrow {
+      width: 20px; height: 20px;
+      border-right: 2px solid var(--text-dim);
+      border-bottom: 2px solid var(--text-dim);
+      transform: rotate(45deg);
+      animation: arrowBounce 1.5s infinite;
+    }
+    @keyframes arrowBounce {
+      0%, 100% { transform: rotate(45deg) translateY(0);   }
+      50%       { transform: rotate(45deg) translateY(5px); }
+    }
+
+    /* ==================================================================
+       6. SHARED SECTION STYLES
+    ================================================================== */
+    section {
+      position: relative;
+      z-index: 1;
+      padding: 5rem 2rem;
+    }
+
+    .section-header {
+      text-align: center;
+      margin-bottom: 3.5rem;
+    }
+
+    .section-tag {
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+      color: var(--secondary);
+      margin-bottom: 0.8rem;
+    }
+
+    .section-title {
+      font-family: 'Orbitron', sans-serif;
+      font-size: clamp(1.5rem, 4vw, 2.5rem);
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 1rem;
+    }
+
+    .section-desc {
+      font-size: 1rem;
+      color: var(--text-dim);
+      max-width: 560px;
+      margin: 0 auto;
+    }
+
+    /* thin coloured rule between sections */
+    .section-divider {
+      width: 60px; height: 2px;
+      background: linear-gradient(90deg, var(--primary), var(--accent));
+      margin: 1rem auto 0;
+      border-radius: 2px;
+    }
+
+    /* ==================================================================
+       7. OVERVIEW / FEATURES SECTION
+    ================================================================== */
+    #overview-cards {
+      background: rgba(5, 5, 32, 0.5);
+    }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+      gap: 1.5rem;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    .feature-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 2rem 1.5rem;
+      transition: transform 0.25s, border-color 0.25s, box-shadow 0.25s;
+    }
+    .feature-card:hover {
+      transform: translateY(-5px);
+      border-color: rgba(79, 195, 247, 0.3);
+      box-shadow: 0 8px 30px rgba(79, 195, 247, 0.08);
+    }
+
+    .feature-icon {
+      font-size: 2.2rem;
+      margin-bottom: 1rem;
+    }
+
+    .feature-card h3 {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 0.6rem;
+      letter-spacing: 0.04em;
+    }
+
+    .feature-card p {
+      font-size: 0.88rem;
+      color: var(--text-dim);
+      line-height: 1.6;
+    }
+
+    /* ==================================================================
+       8. PLANETS SECTION — detailed glassmorphism cards with real data
+       ──────────────────────────────────────────────────────────────────
+       Grid:  4 columns on desktop → 2 on tablet → 1 on mobile.
+       Cards: glassmorphism (frosted glass) style, colored top accent
+              border keyed to each planet's color via --p-color variable.
+       Icon:  80×80 px spinning circle with radial gradient highlight
+              and a color-matched glow box-shadow.
+       Saturn: ::after pseudo-element adds a tilted CSS ring on the icon.
+    ================================================================== */
+
+    /* very slightly lighter background distinguishes this section */
+    #planets { background: rgba(3, 3, 20, 0.55); }
+
+    /* ── Heading + glowing orange underline bar ── */
+    .planets-heading {
+      text-align: center;
+      margin-bottom: 3.5rem;
+    }
+    .planets-heading h2 {
+      font-family: 'Orbitron', sans-serif;
+      font-size: clamp(1.6rem, 4vw, 2.6rem);
+      font-weight: 700;
+      color: #fff;
+      letter-spacing: 0.04em;
+      margin-bottom: 0.75rem;
+    }
+    /* thin bar with layered glow — inner sharp + outer soft */
+    .glow-line {
+      display: block;
+      width: 80px;
+      height: 3px;
+      background: var(--primary);
+      border-radius: 2px;
+      margin: 0 auto 1rem;
+      box-shadow:
+        0 0  6px var(--primary),
+        0 0 18px var(--primary),
+        0 0 38px rgba(245, 166, 35, 0.45);
+    }
+
+    /* ── 4-column responsive grid ── */
+    .planets-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);  /* 4 on desktop        */
+      gap: 1.4rem;
+      max-width: 1240px;
+      margin: 0 auto;
+    }
+    @media (max-width: 1024px) {
+      /* tablet: 2 columns so cards stay readable */
+      .planets-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 576px) {
+      /* mobile: single column stack */
+      .planets-grid { grid-template-columns: 1fr; }
+    }
+
+    /* ── Glassmorphism card ── */
+    .planet-card {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.10);
+      /* colored top accent — color set via --p-color on each card element */
+      border-top: 2.5px solid var(--p-color, rgba(255,255,255,0.3));
+      border-radius: 16px;
+      padding: 24px 20px;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    /* subtle inner-top sheen, like light catching a glass surface */
+    .planet-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 8%; right: 8%;
+      height: 1px;
+      background: linear-gradient(90deg,
+        transparent, rgba(255,255,255,0.13), transparent);
+      pointer-events: none;
+    }
+    /* lift + colored glow ring on hover */
+    .planet-card:hover {
+      transform: translateY(-8px);
+      box-shadow:
+        0 22px 52px rgba(0, 0, 0, 0.55),
+        0  0  28px var(--p-color, rgba(255,255,255,0.1));
+    }
+
+    /* ── Spinning planet icon — 80×80 px circle ──
+       Radial gradient simulates a lit sphere highlight.
+       box-shadow set inline per-planet so glow color matches exactly.
+       Animation: slow 20-second full rotation.                        */
+    .planet-icon {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      margin: 0 auto 1.2rem;
+      position: relative;
+      /* gradient overlay gives a 3-D lit look */
+      background: radial-gradient(
+          circle at 34% 34%,
+          rgba(255,255,255,0.44) 0%,
+          rgba(255,255,255,0.06) 44%,
+          transparent 70%
+        ), var(--p-color, #888);
+      animation: planetSpin 20s linear infinite;
+    }
+
+    /* Saturn's ring — ::after pseudo-element tilted via rotateX.
+       ringCounter cancels the parent's 2-D spin so the ring stays
+       visually stable while the sphere appears to rotate beneath it. */
+    .planet-icon.has-ring::after {
+      content: '';
+      position: absolute;
+      width: 140%; height: 37%;
+      top: 32%; left: -20%;
+      border: 2.5px solid rgba(228, 209, 145, 0.68);
+      border-radius: 50%;
+      animation: ringCounter 20s linear infinite;
+      pointer-events: none;
+    }
+
+    @keyframes planetSpin {
+      to { transform: rotate(360deg); }
+    }
+    /* counter-rotate so ring tilt is preserved while canceling parent spin */
+    @keyframes ringCounter {
+      from { transform: rotateX(70deg) rotate(0deg);    }
+      to   { transform: rotateX(70deg) rotate(-360deg); }
+    }
+
+    /* ── Planet name — Orbitron, large ── */
+    .planet-name {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 1rem;
+      font-weight: 700;
+      color: #fff;
+      letter-spacing: 0.07em;
+      margin-bottom: 1rem;
+    }
+
+    /* ── Info rows: emoji icon · dim label · bright value ── */
+    .planet-info {
+      display: flex;
+      flex-direction: column;
+      gap: 0.48rem;
+      text-align: left;
+    }
+    .p-row {
+      display: flex;
+      align-items: baseline;
+      gap: 0.4rem;
+      font-size: 0.79rem;
+      line-height: 1.4;
+    }
+    .p-row .pi    { flex-shrink: 0; font-size: 0.85rem; }   /* emoji icon  */
+    .p-row .pl    { color: var(--text-dim); flex-shrink: 0;} /* label       */
+    .p-row .pv    { color: var(--text); font-weight: 600; }  /* value       */
+
+    /* ==================================================================
+       9. CONTROLS SECTION — visual keyboard + mouse & menu cards + ticker
+       ──────────────────────────────────────────────────────────────────
+       Layout:  two equal columns — keyboard left, mouse/menu right.
+       Keys:    44×44 px squares, dark bg, border-bottom "depth" shadow,
+                cyan glow on hover to feel interactive.
+       Ticker:  infinite left-scroll with fade masks on both edges.
+    ================================================================== */
+    #controls { background: rgba(5, 5, 32, 0.5); }
+
+    /* ── Two-column split: keyboard ← | mouse/menu → ── */
+    .controls-layout {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 3rem;
+      max-width: 1100px;
+      margin: 0 auto 3rem;
+      align-items: start;
+    }
+
+    /* ── Column heading: label + fading rule line ── */
+    .ctrl-col-title {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.82rem;
+      font-weight: 700;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--secondary);
+      margin-bottom: 1.6rem;
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+    .ctrl-col-title::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: linear-gradient(90deg, var(--secondary), transparent);
+      opacity: 0.3;
+    }
+
+    /* ── Arrow key cluster — 3×2 named-area grid ──
+       Grid areas:
+         . up .
+         left down right                             */
+    .arrow-cluster {
+      display: grid;
+      grid-template-areas:
+        ". up ."
+        "left down right";
+      grid-template-columns: 44px 44px 44px;
+      gap: 6px;
+      margin-bottom: 0.4rem;
+    }
+
+    /* ── Base keyboard key — 44×44, 3D depth via border-bottom ── */
+    .kbd {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 44px;
+      height: 44px;
+      background: #1a1a2e;
+      border: 1px solid #444;
+      border-bottom: 4px solid #000;    /* bottom shadow gives 3-D press depth */
+      border-radius: 6px;
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: #e0e0e0;
+      cursor: default;
+      user-select: none;
+      box-shadow: 0 4px 0 #000;
+      transition: background 0.15s, box-shadow 0.12s, color 0.12s;
+    }
+    /* hover: brighten background + cyan glow */
+    .kbd:hover {
+      background: #22224a;
+      box-shadow: 0 4px 0 #000, 0 0 14px rgba(79, 195, 247, 0.5);
+      color: var(--secondary);
+    }
+    /* wider keys: ESC, etc. */
+    .kbd-wide { width: auto; padding: 0 0.75rem; }
+
+    /* grid-area assignments for arrow cluster */
+    .k-up    { grid-area: up;    }
+    .k-down  { grid-area: down;  }
+    .k-left  { grid-area: left;  }
+    .k-right { grid-area: right; }
+
+    /* ── Label rows beneath the arrow cluster ── */
+    .arrow-labels {
+      display: grid;
+      grid-template-columns: 44px 44px 44px;
+      gap: 6px;
+      margin-bottom: 0.25rem;
+    }
+    .arrow-label {
+      font-size: 0.59rem;
+      color: var(--text-dim);
+      text-align: center;
+      line-height: 1.35;
+    }
+
+    /* ── Individual key shortcut row: [key]  description ── */
+    .key-shortcut {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: 0.55rem 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .key-shortcut:last-child { border-bottom: none; }
+
+    .ks-desc {
+      font-size: 0.87rem;
+      color: var(--text-dim);
+      line-height: 1.45;
+    }
+    .ks-desc strong { color: var(--text); font-weight: 600; }
+
+    /* ── Mouse & Menu cards (right column) ── */
+    .mouse-cards {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .mouse-card {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.09);
+      border-left: 3px solid var(--secondary);   /* accent stripe on left edge */
+      border-radius: 10px;
+      padding: 1.15rem 1.4rem;
+      transition: border-color 0.25s, box-shadow 0.25s;
+    }
+    .mouse-card:hover {
+      border-color: var(--primary);
+      box-shadow: 0 0 22px rgba(245, 166, 35, 0.12);
+    }
+
+    .mouse-card-header {
+      display: flex;
+      align-items: center;
+      gap: 0.7rem;
+      margin-bottom: 0.6rem;
+    }
+    .mouse-card-icon  { font-size: 1.45rem; line-height: 1; }
+    .mouse-card-title {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: #fff;
+      letter-spacing: 0.06em;
+    }
+    .mouse-card p {
+      font-size: 0.85rem;
+      color: var(--text-dim);
+      margin-bottom: 0.55rem;
+      line-height: 1.55;
+    }
+    .mouse-card ul { display: flex; flex-direction: column; gap: 0.3rem; }
+    .mouse-card ul li {
+      font-size: 0.8rem;
+      color: var(--text-dim);
+      display: flex;
+      align-items: baseline;
+      gap: 0.45rem;
+    }
+    /* bullet arrow */
+    .mouse-card ul li::before { content: '›'; color: var(--primary); font-weight: 700; }
+
+    /* mini preview panel shown inside card 2 */
+    .mini-panel {
+      margin-top: 0.45rem;
+      background: rgba(0, 0, 0, 0.38);
+      border: 1px solid rgba(79, 195, 247, 0.22);
+      border-radius: 6px;
+      padding: 0.45rem 0.8rem;
+      font-size: 0.73rem;
+      color: var(--secondary);
+      font-family: 'Orbitron', sans-serif;
+      letter-spacing: 0.04em;
+      opacity: 0.88;
+    }
+
+    /* ── Tips ticker — infinitely scrolling horizontal marquee ──
+       Two identical sets of spans are placed end-to-end so when
+       the first set exits left the second takes its place, making
+       the loop seamless (no gap, no jump).                         */
+    .tips-ticker-wrap {
+      max-width: 1100px;
+      margin: 0 auto;
+      overflow: hidden;
+      background: rgba(255, 255, 255, 0.025);
+      border: 1px solid rgba(245, 166, 35, 0.20);
+      border-radius: 8px;
+      padding: 0.75rem 0;
+      position: relative;
+    }
+    /* fade masks — left hides entry, right hides exit */
+    .tips-ticker-wrap::before,
+    .tips-ticker-wrap::after {
+      content: '';
+      position: absolute;
+      top: 0; bottom: 0;
+      width: 70px;
+      z-index: 2;
+      pointer-events: none;
+    }
+    .tips-ticker-wrap::before {
+      left: 0;
+      background: linear-gradient(90deg, rgba(5,5,32,0.98), transparent);
+    }
+    .tips-ticker-wrap::after {
+      right: 0;
+      background: linear-gradient(270deg, rgba(5,5,32,0.98), transparent);
+    }
+
+    .tips-ticker {
+      display: flex;
+      white-space: nowrap;
+      /* translateX(-50%) shifts exactly one set-width → seamless loop */
+      animation: tickerScroll 30s linear infinite;
+    }
+    .tips-ticker span {
+      font-size: 0.82rem;
+      color: var(--text-dim);
+      padding: 0 2.4rem;
+    }
+    .tips-ticker span strong { color: var(--primary); }
+
+    @keyframes tickerScroll {
+      from { transform: translateX(0); }
+      to   { transform: translateX(-50%); }  /* shift exactly one duplicate set */
+    }
+
+    /* ==================================================================
+       10. ABOUT SECTION
+    ================================================================== */
+
+    .about-inner {
+      max-width: 800px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 3rem;
+      align-items: start;
+    }
+
+    .about-text h2 {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 1rem;
+    }
+
+    .about-text p {
+      font-size: 0.95rem;
+      color: var(--text-dim);
+      margin-bottom: 1rem;
+      line-height: 1.75;
+    }
+
+    /* tech stack tags */
+    .tech-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-top: 1.2rem;
+    }
+    .tech-tag {
+      padding: 0.35rem 0.8rem;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      font-size: 0.78rem;
+      color: var(--secondary);
+      letter-spacing: 0.04em;
+    }
+
+    /* project info list on the right */
+    .about-info {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 2rem 1.5rem;
+    }
+
+    .info-row {
+      display: flex;
+      flex-direction: column;
+      gap: 0.15rem;
+      padding: 0.8rem 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .info-row:last-child { border-bottom: none; }
+
+    .info-label {
+      font-size: 0.7rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+    }
+    .info-value {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.88rem;
+      color: #fff;
+    }
+
+    /* ==================================================================
+       11. FOOTER
+    ================================================================== */
+    footer {
+      position: relative;
+      z-index: 1;
+      text-align: center;
+      padding: 2rem;
+      border-top: 1px solid var(--border);
+      font-size: 0.82rem;
+      color: var(--text-dim);
+    }
+    footer span { color: var(--primary); }
+
+    /* ==================================================================
+       12. RESPONSIVE BREAKPOINTS
+    ================================================================== */
+
+    /* tablet: collapse nav links, controls to single column */
+    @media (max-width: 768px) {
+      .nav { padding: 0 1.2rem; }
+      .nav-links {
+        display: none;   /* hidden on mobile — would need JS to toggle  */
+      }
+
+      .about-inner {
+        grid-template-columns: 1fr;
+        gap: 2rem;
+      }
+
+      /* stack keyboard and mouse columns vertically on tablet */
+      .controls-layout {
+        grid-template-columns: 1fr;
+        gap: 2rem;
+      }
+
+      .hero-title { letter-spacing: 0.01em; }
+    }
+
+    /* mobile: tighten spacing */
+    @media (max-width: 480px) {
+      section { padding: 3.5rem 1.2rem; }
+      .features-grid { grid-template-columns: 1fr; }
+      .planets-grid  { grid-template-columns: 1fr 1fr; }
+      .controls-layout { grid-template-columns: 1fr; }
+    }
+
+    /* ==================================================================
+       13. PAGE LOADER — full-screen CSS-only intro, 2.5 s then fade out
+       ──────────────────────────────────────────────────────────────────
+       Technique: element starts visible; loaderExit keyframe brings it
+       to opacity:0 + visibility:hidden after a 2.5 s delay.
+       pointer-events are blocked until the animation completes so the
+       user cannot click through it during the intro.
+    ================================================================== */
+    .page-loader {
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      background: #000008;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2rem;
+      animation: loaderExit 0.6s ease forwards;
+      animation-delay: 2.5s;
+    }
+    @keyframes loaderExit {
+      to { opacity: 0; visibility: hidden; pointer-events: none; }
+    }
+
+    /* ── Orrery: sun + 3 concentric spinning orbit rings with dots ── */
+    .loader-orrery {
+      position: relative;
+      width: 110px;
+      height: 110px;
+    }
+    /* sun: centered via negative margin so transform only handles glow */
+    .loader-sun {
+      position: absolute;
+      top: 50%; left: 50%;
+      width: 28px; height: 28px;
+      margin: -14px 0 0 -14px;
+      background: radial-gradient(circle at 38% 38%, #ffe566, #f5a623);
+      border-radius: 50%;
+      box-shadow: 0 0 20px #f5a623, 0 0 45px rgba(245,166,35,0.5);
+      animation: loaderSunPulse 1.2s ease-in-out infinite;
+    }
+    @keyframes loaderSunPulse {
+      0%, 100% { box-shadow: 0 0 15px #f5a623, 0 0 30px rgba(245,166,35,0.4); }
+      50%       { box-shadow: 0 0 30px #f5a623, 0 0 65px rgba(245,166,35,0.65); }
+    }
+    /* orbit ring — centered with negative margin; only transform:rotate is animated */
+    .loader-ring {
+      position: absolute;
+      border: 1px solid rgba(255,255,255,0.13);
+      border-radius: 50%;
+      top: 50%; left: 50%;
+    }
+    .loader-ring-1 { width:58px; height:58px; margin:-29px 0 0 -29px; animation: loaderSpin 1.4s linear infinite; }
+    .loader-ring-2 { width:84px; height:84px; margin:-42px 0 0 -42px; animation: loaderSpin 2.5s linear infinite reverse; }
+    .loader-ring-3 { width:110px; height:110px; margin:-55px 0 0 -55px; animation: loaderSpin 4s linear infinite; }
+    @keyframes loaderSpin { to { transform: rotate(360deg); } }
+
+    /* dot sits at the top of each ring; inherits ring's rotation */
+    .loader-dot {
+      position: absolute;
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      top: -4px; left: 50%; margin-left: -4px;
+    }
+    .loader-dot-1 { background: #4fc3f7; box-shadow: 0 0 8px #4fc3f7; }
+    .loader-dot-2 { background: #e27b58; box-shadow: 0 0 8px #e27b58; }
+    .loader-dot-3 { background: #b39ddb; box-shadow: 0 0 8px #b39ddb; }
+
+    .loader-text {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.8rem;
+      letter-spacing: 0.22em;
+      color: var(--text-dim);
+      animation: loaderBlink 1.2s ease-in-out infinite;
+    }
+    @keyframes loaderBlink {
+      0%, 100% { opacity: 0.45; }
+      50%       { opacity: 1; }
+    }
+
+    /* ==================================================================
+       14. SHOOTING STARS — 5 diagonal CSS streaks across the fixed sky
+       ──────────────────────────────────────────────────────────────────
+       Each element spends most of its animation cycle invisible.
+       In the last 10% it flashes on and shoots across diagonally,
+       then hides again — giving a convincing sporadic meteor effect.
+       Different total durations + delays → feels random.
+    ================================================================== */
+    .shooting-star {
+      position: fixed;
+      width: 160px;
+      height: 2px;
+      background: linear-gradient(90deg, rgba(255,255,255,0.9), transparent);
+      border-radius: 2px;
+      pointer-events: none;
+      z-index: 1;
+      transform: rotate(-45deg);
+      opacity: 0;
+    }
+    /* five stars at different screen positions and timings */
+    .ss1 { top: 8vh;  left: 78vw; animation: shootStar  9s linear  0s  infinite; }
+    .ss2 { top: 3vh;  left: 55vw; animation: shootStar 13s linear  3s  infinite; }
+    .ss3 { top:14vh;  left: 90vw; animation: shootStar 11s linear  7s  infinite; }
+    .ss4 { top: 6vh;  left: 42vw; animation: shootStar 16s linear 12s  infinite; }
+    .ss5 { top:20vh;  left: 68vw; animation: shootStar 12s linear 19s  infinite; }
+
+    /* most of cycle: invisible at start pos; last 10%: flash & move */
+    @keyframes shootStar {
+      0%, 89% { opacity: 0;   transform: rotate(-45deg) translateX(0); }
+      90%      { opacity: 0.9; transform: rotate(-45deg) translateX(0); }
+      100%     { opacity: 0;   transform: rotate(-45deg) translateX(-420px); }
+    }
+
+    /* ==================================================================
+       15. NAVIGATION UPGRADE — hamburger CSS checkbox hack + :target glow
+    ================================================================== */
+    /* hidden checkbox drives the mobile menu open/close */
+    .nav-toggle-cb { display: none; }
+
+    /* hamburger icon (3 bars), desktop-hidden */
+    .nav-hamburger {
+      display: none;
+      flex-direction: column;
+      justify-content: center;
+      gap: 5px;
+      width: 28px; height: 28px;
+      cursor: pointer;
+      z-index: 101;
+    }
+    .nav-hamburger span {
+      display: block;
+      width: 100%; height: 2px;
+      background: var(--text);
+      border-radius: 2px;
+      transition: transform 0.25s, opacity 0.25s;
+    }
+    /* animate 3 bars → × when checkbox checked */
+    .nav-toggle-cb:checked ~ .nav-hamburger span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+    .nav-toggle-cb:checked ~ .nav-hamburger span:nth-child(2) { opacity: 0; }
+    .nav-toggle-cb:checked ~ .nav-hamburger span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+    /* slide nav links down as a vertical panel when open */
+    .nav-toggle-cb:checked ~ .nav-links {
+      display: flex !important;
+      flex-direction: column;
+      position: absolute;
+      top: 64px; left: 0; right: 0;
+      background: var(--nav-bg);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      padding: 1.5rem 2rem;
+      gap: 1.2rem;
+      z-index: 99;
+    }
+    /* subtle orange inner-glow when a section is the URL target */
+    section:target { box-shadow: inset 0 0 80px rgba(245,166,35,0.04); }
+
+    /* ==================================================================
+       16. PLANET CARD — atmosphere aura on hover
+       ──────────────────────────────────────────────────────────────────
+       .planet-icon::before is a ring that pulses outward (scale 1→1.35,
+       opacity 1→0) giving an atmospheric glow effect on card hover.
+       Uses ::before so it doesn't conflict with Saturn's ::after ring.
+    ================================================================== */
+    .planet-icon::before {
+      content: '';
+      position: absolute;
+      inset: -6px;
+      border-radius: 50%;
+      border: 2px solid var(--p-color, rgba(255,255,255,0.3));
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s;
+    }
+    .planet-card:hover .planet-icon::before {
+      opacity: 1;
+      animation: atmospherePulse 2s ease-in-out infinite;
+    }
+    @keyframes atmospherePulse {
+      0%   { transform: scale(1);    opacity: 0.85; }
+      60%  { transform: scale(1.35); opacity: 0; }
+      100% { transform: scale(1.35); opacity: 0; }
+    }
+
+    /* ==================================================================
+       17. SCROLL REVEAL — fade + transform animations
+       ──────────────────────────────────────────────────────────────────
+       animation-fill-mode: both keeps elements invisible before the
+       animation starts and locked at the final state when done.
+       Staggered delays simulate items appearing as you scroll down.
+    ================================================================== */
+
+    /* planet cards: fade up, 8-step stagger */
+    .planet-card { animation: revealUp 0.65s ease both; }
+    .planet-card:nth-child(1) { animation-delay: 0.05s; }
+    .planet-card:nth-child(2) { animation-delay: 0.15s; }
+    .planet-card:nth-child(3) { animation-delay: 0.25s; }
+    .planet-card:nth-child(4) { animation-delay: 0.35s; }
+    .planet-card:nth-child(5) { animation-delay: 0.45s; }
+    .planet-card:nth-child(6) { animation-delay: 0.55s; }
+    .planet-card:nth-child(7) { animation-delay: 0.65s; }
+    .planet-card:nth-child(8) { animation-delay: 0.75s; }
+    @keyframes revealUp {
+      from { opacity: 0; transform: translateY(40px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* feature cards: same fade-up with 6-step stagger */
+    .feature-card { animation: revealUp 0.6s ease both; }
+    .feature-card:nth-child(1) { animation-delay: 0.1s; }
+    .feature-card:nth-child(2) { animation-delay: 0.2s; }
+    .feature-card:nth-child(3) { animation-delay: 0.3s; }
+    .feature-card:nth-child(4) { animation-delay: 0.4s; }
+    .feature-card:nth-child(5) { animation-delay: 0.5s; }
+    .feature-card:nth-child(6) { animation-delay: 0.6s; }
+
+    /* section headings: slide in from left */
+    .section-title,
+    .planets-heading h2 {  animation: revealLeft 0.7s ease both; animation-delay: 0.05s; }
+    @keyframes revealLeft {
+      from { opacity: 0; transform: translateX(-28px); }
+      to   { opacity: 1; transform: translateX(0); }
+    }
+
+    /* ==================================================================
+       20. ENHANCED FOOTER
+    ================================================================== */
+    footer {
+      position: relative;
+      z-index: 1;
+      text-align: center;
+      padding: 3rem 2rem 2.5rem;
+      border-top: 1px solid rgba(245,166,35,0.25);   /* orange accent rule */
+      background: rgba(0,0,8,0.65);
+    }
+    .footer-logo {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--primary);
+      letter-spacing: 0.1em;
+      margin-bottom: 0.8rem;
+    }
+    .footer-line {
+      font-size: 0.83rem;
+      color: var(--text-dim);
+      margin-bottom: 0.3rem;
+      line-height: 1.7;
+    }
+    .footer-line strong { color: var(--text); }
+
+    /* small icon badges — GitHub, Python, OpenGL placeholders */
+    .footer-icons {
+      display: flex;
+      justify-content: center;
+      gap: 0.8rem;
+      margin: 1.3rem 0;
+    }
+    .footer-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 38px; height: 38px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 8px;
+      font-size: 1.1rem;
+      color: var(--text-dim);
+      text-decoration: none;
+      transition: background 0.2s, border-color 0.2s, color 0.2s, transform 0.2s;
+    }
+    .footer-icon:hover {
+      background: rgba(245,166,35,0.12);
+      border-color: rgba(245,166,35,0.35);
+      color: var(--primary);
+      transform: translateY(-2px);
+    }
+    .footer-copy {
+      font-size: 0.74rem;
+      color: rgba(136,138,170,0.55);
+      margin-top: 0.8rem;
+    }
+
+    /* ==================================================================
+       21. SCROLL-TO-TOP — fixed bottom-right anchor link (CSS only)
+       Always visible; href="#" scrolls the page to the very top.
+    ================================================================== */
+    .scroll-top {
+      position: fixed;
+      bottom: 2rem;
+      right: 2rem;
+      z-index: 90;
+      width: 44px; height: 44px;
+      background: rgba(245,166,35,0.14);
+      border: 1px solid rgba(245,166,35,0.38);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+      color: var(--primary);
+      text-decoration: none;
+      box-shadow: 0 4px 16px rgba(245,166,35,0.15);
+      transition: background 0.2s, box-shadow 0.2s, transform 0.2s;
+    }
+    .scroll-top:hover {
+      background: rgba(245,166,35,0.28);
+      box-shadow: 0 4px 28px rgba(245,166,35,0.38);
+      transform: translateY(-3px);
+    }
+
+    /* ==================================================================
+       22. GLOBAL POLISH — consistent smooth transitions everywhere
+    ================================================================== */
+    a, button, .planet-card, .feature-card, .mouse-card,
+    .kbd, .footer-icon, .scroll-top {
+      transition-property: transform, box-shadow, border-color, background, color, opacity;
+      transition-duration: 0.22s;
+      transition-timing-function: ease;
+    }
+
+    /* ==================================================================
+       23. RESPONSIVE — additional breakpoints for new sections
+    ================================================================== */
+    @media (max-width: 768px) {
+      .nav-hamburger   { display: flex; }
+      .nav-links       { display: none; }   /* hidden until checkbox toggled */
+    }
+    @media (max-width: 480px) {
+    }
+
+    /* ==================================================================
+       SIMULATION SECTION — live HTML5 Canvas preview
+       Mirrors the PyOpenGL simulation using the same planet data,
+       3D MVP pipeline, Phong lighting, and orbital mechanics.
+    ================================================================== */
+    #simulation {
+      padding: 5rem 1.5rem 3rem;
+      max-width: 1100px;
+      margin: 0 auto;
+      position: relative;
+      z-index: 1;
+    }
+
+    .sim-wrapper {
+      position: relative;
+      width: 100%;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      box-shadow: 0 0 60px rgba(79, 195, 247, 0.06), 0 0 120px rgba(79, 195, 247, 0.03);
+    }
+
+    #solar-canvas {
+      display: block;
+      width: 100%;
+      background: #000005;
+      cursor: crosshair;
+      outline: none;
+    }
+    #solar-canvas:focus {
+      border: 1px solid rgba(79, 195, 247, 0.4);
+    }
+
+    .sim-controls-bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.5rem 1.5rem;
+      padding: 0.75rem 1.2rem;
+      background: rgba(5, 5, 32, 0.85);
+      border-top: 1px solid var(--border);
+      font-family: 'Exo 2', sans-serif;
+      font-size: 0.78rem;
+      color: var(--text-dim);
+    }
+
+    .speed-control {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-left: auto;
+    }
+    .speed-control label {
+      color: var(--secondary);
+      font-size: 0.78rem;
+      white-space: nowrap;
+    }
+    #speed-slider {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 110px;
+      height: 4px;
+      border-radius: 2px;
+      background: linear-gradient(to right, var(--primary) 0%, var(--primary) var(--val, 33%), rgba(255,255,255,0.12) var(--val, 33%));
+      outline: none;
+      cursor: pointer;
+    }
+    #speed-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 14px; height: 14px;
+      border-radius: 50%;
+      background: var(--primary);
+      box-shadow: 0 0 6px rgba(245,166,35,0.6);
+      cursor: pointer;
+    }
+    #speed-slider::-moz-range-thumb {
+      width: 14px; height: 14px;
+      border-radius: 50%;
+      background: var(--primary);
+      border: none;
+      cursor: pointer;
+    }
+    #speed-label {
+      min-width: 36px;
+      text-align: right;
+      color: var(--primary);
+      font-weight: 600;
+    }
+    .sim-key {
+      display: inline-block;
+      padding: 0.1em 0.45em;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 0.75rem;
+      color: var(--secondary);
+    }
+    .sim-cg-badge {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-top: 1rem;
+      justify-content: center;
+    }
+    .cg-tag {
+      padding: 0.25rem 0.7rem;
+      border-radius: 20px;
+      font-size: 0.72rem;
+      font-family: 'Exo 2', sans-serif;
+      font-weight: 600;
+      letter-spacing: 0.03em;
+      border: 1px solid;
+    }
+    .cg-tag.orange { color: #f5a623; border-color: rgba(245,166,35,0.35); background: rgba(245,166,35,0.08); }
+    .cg-tag.blue   { color: #4fc3f7; border-color: rgba(79,195,247,0.35); background: rgba(79,195,247,0.08); }
+    .cg-tag.purple { color: #b39ddb; border-color: rgba(179,157,219,0.35); background: rgba(179,157,219,0.08); }
+    .cg-tag.green  { color: #81c784; border-color: rgba(129,199,132,0.35); background: rgba(129,199,132,0.08); }
+  </style>
+</head>
+
+<body>
+
+  <!-- ──────────────────────────────────────────────────────────────────
+       PAGE LOADER — CSS-only full-screen intro, fades out after 2.5 s
+       Sun + 3 orbiting dots with Orbitron text, no JavaScript needed.
+  ────────────────────────────────────────────────────────────────────── -->
+  <div class="page-loader" aria-hidden="true">
+    <div class="loader-orrery">
+      <!-- central sun -->
+      <div class="loader-sun"></div>
+      <!-- three orbit rings, each with a coloured dot riding its top -->
+      <div class="loader-ring loader-ring-1"><div class="loader-dot loader-dot-1"></div></div>
+      <div class="loader-ring loader-ring-2"><div class="loader-dot loader-dot-2"></div></div>
+      <div class="loader-ring loader-ring-3"><div class="loader-dot loader-dot-3"></div></div>
+    </div>
+    <p class="loader-text">Initializing Solar System&hellip;</p>
+  </div>
+
+  <!-- ──────────────────────────────────────────────────────────────────
+       SHOOTING STARS — 5 CSS diagonal streaks, different delays
+  ────────────────────────────────────────────────────────────────────── -->
+  <div class="shooting-star ss1" aria-hidden="true"></div>
+  <div class="shooting-star ss2" aria-hidden="true"></div>
+  <div class="shooting-star ss3" aria-hidden="true"></div>
+  <div class="shooting-star ss4" aria-hidden="true"></div>
+  <div class="shooting-star ss5" aria-hidden="true"></div>
+
+  <!-- ──────────────────────────────────────────────────────────────────
+       SCROLL-TO-TOP — fixed bottom-right anchor (CSS only, no JS)
+  ────────────────────────────────────────────────────────────────────── -->
+  <a href="#" class="scroll-top" aria-label="Back to top">↑</a>
+
+  <!-- ──────────────────────────────────────────────────────────────────
+       STAR LAYERS  (CSS-animated background, 3 depth planes)
+  ────────────────────────────────────────────────────────────────────── -->
+  <div class="stars-1" aria-hidden="true"></div>
+  <div class="stars-2" aria-hidden="true"></div>
+  <div class="stars-3" aria-hidden="true"></div>
+
+  <!-- ──────────────────────────────────────────────────────────────────
+       NAVIGATION
+  ────────────────────────────────────────────────────────────────────── -->
+  <nav class="nav" role="navigation" aria-label="Main navigation">
+    <div class="nav-logo">
+      <span>🪐</span> Solar System
+    </div>
+
+    <!-- CSS-only hamburger: hidden checkbox drives the menu open/close -->
+    <input type="checkbox" id="nav-cb" class="nav-toggle-cb" aria-hidden="true" />
+    <label for="nav-cb" class="nav-hamburger" aria-label="Toggle menu">
+      <span></span><span></span><span></span>
+    </label>
+
+    <ul class="nav-links">
+      <li><a href="#simulation">Simulation</a></li>
+      <li><a href="#overview-cards">Overview</a></li>
+      <li><a href="#planets">Planets</a></li>
+      <li><a href="#controls">Controls</a></li>
+      <li><a href="#about">About</a></li>
+    </ul>
+  </nav>
+
+  <!-- ──────────────────────────────────────────────────────────────────
+       HERO — full viewport height landing screen
+  ────────────────────────────────────────────────────────────────────── -->
+  <section id="overview" class="hero" aria-label="Hero">
+
+    <!-- decorative orbit rings -->
+    <div class="hero-orbit"   aria-hidden="true"></div>
+    <div class="hero-orbit hero-orbit-2" aria-hidden="true"></div>
+
+    <div class="hero-content">
+      <p class="hero-tag">Computer Graphics Lab Project</p>
+
+      <h1 class="hero-title">
+        SOLAR SYSTEM<br />SIMULATION
+      </h1>
+
+      
+
+      
+    </div>
+
+    <!-- subtle scroll prompt -->
+    <div class="hero-scroll-hint" aria-hidden="true">
+      <span>SCROLL</span>
+      <div class="scroll-arrow"></div>
+    </div>
+  </section>
+
+  <!-- ──────────────────────────────────────────────────────────────────
+       SIMULATION — HTML5 Canvas live preview
+       Uses the EXACT same planet data from planets.py and implements
+       the same CG concepts: MVP pipeline, gluLookAt, gluPerspective,
+       Phong lighting (GL_LIGHT0), alpha blending, painter's algorithm.
+  ────────────────────────────────────────────────────────────────────── -->
+  <section id="simulation" aria-labelledby="sim-heading">
+
+    <div class="section-header">
+      <p class="section-tag">Live Browser Preview</p>
+      <h2 class="section-title" id="sim-heading">Interactive Simulation</h2>
+      <div class="section-divider"></div>
+      <p class="section-desc">
+        HTML5 Canvas implementation driven by the <strong>same planet data</strong> from
+        <code>planets.py</code> — applying the identical Computer Graphics concepts used in the PyOpenGL source.
+      </p>
+    </div>
+
+    <!-- CG concept badges -->
+   
+
+    <br />
+
+    <div class="sim-wrapper">
+      <canvas id="solar-canvas" tabindex="0" aria-label="Interactive solar system simulation. Click then use keyboard controls."></canvas>
+      <div class="sim-controls-bar">
+        <span><span class="sim-key">Click</span> canvas to focus</span>
+        <span><span class="sim-key">P</span> Pause / Resume</span>
+        <span><span class="sim-key">R</span> Reset Camera</span>
+        <span><span class="sim-key">+</span> / <span class="sim-key">-</span> Zoom</span>
+        <span><span class="sim-key">↑↓←→</span> Orbit Camera</span>
+        <div class="speed-control">
+          <label for="speed-slider">⚡ Speed</label>
+          <input type="range" id="speed-slider" min="0.1" max="5" step="0.1" value="1" />
+          <span id="speed-label">1×</span>
+        </div>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- ──────────────────────────────────────────────────────────────────
+       OVERVIEW — feature highlight cards
+  ────────────────────────────────────────────────────────────────────── -->
+  <section id="overview-cards" aria-labelledby="features-heading">
+    <div class="section-header">
+      <p class="section-tag">What's inside</p>
+      <h2 class="section-title" id="features-heading">Key Features</h2>
+      <div class="section-divider"></div>
+      <p class="section-desc">
+        A fully interactive 3D solar system built with Python, PyOpenGL,
+        and GLUT — rendered in real time on your machine.
+      </p>
+    </div>
+
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon">🌟</div>
+        <h3>OpenGL Lighting</h3>
+        <p>Point-light source at the Sun position with warm diffuse, ambient fill, and specular highlights on all planetary surfaces.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🪐</div>
+        <h3>Saturn's Rings</h3>
+        <p>Multi-band ring system with a Cassini Division gap, semi-transparent blending, and correct axial tilt inheritance.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🌍</div>
+        <h3>Earth's Moon</h3>
+        <p>The Moon orbits Earth in real time, staying within Earth's tilted equatorial frame independently of the planet's self-spin.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🌌</div>
+        <h3>Deep Space Sky</h3>
+        <p>600 size-varied stars with colour tints, 5 coloured nebula clusters, and a pre-generated asteroid belt between Mars and Jupiter.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🎥</div>
+        <h3>Free Camera</h3>
+        <p>Full spherical orbit camera — pan, tilt, zoom, and jump to any planet from the right-click context menu.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">⚡</div>
+        <h3>60 fps Animation</h3>
+        <p>Frame-rate independent delta-time physics keeps orbits and spins smooth at any display refresh rate.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ──────────────────────────────────────────────────────────────────
+       PLANETS — glassmorphism cards, spinning icons, real planet data
+       Each card uses --p-color (CSS var) for the top accent border and
+       the hover glow.  The planet icon box-shadow is set inline with
+       the exact rgba values so the glow perfectly matches the planet.
+  ────────────────────────────────────────────────────────────────────── -->
+  <section id="planets" aria-labelledby="planets-heading">
+
+    <!-- Heading with glowing orange underline -->
+    <div class="planets-heading">
+      <p class="section-tag">The Solar System</p>
+      <h2 id="planets-heading">The 8 Planets</h2>
+      <span class="glow-line" aria-hidden="true"></span>
+      <p class="section-desc">
+        Real diameter, distance, temperature, and moon data for all eight planets.
+      </p>
+    </div>
+
+    <div class="planets-grid">
+
+      <!-- ── Mercury ─────────────────────────────────────────────── -->
+      <div class="planet-card" style="--p-color: #b5b5b5;">
+        <div class="planet-icon"
+             style="box-shadow: 0 0 14px rgba(181,181,181,0.55),
+                                0 0 35px rgba(181,181,181,0.22),
+                                inset 0 0 14px rgba(0,0,0,0.35);
+                    --p-color: #b5b5b5;"></div>
+        <p class="planet-name">Mercury</p>
+        <div class="planet-info">
+          <div class="p-row"><span class="pi">📏</span><span class="pl">Diameter:</span><span class="pv">4,879 km</span></div>
+          <div class="p-row"><span class="pi">☀️</span><span class="pl">Distance:</span><span class="pv">57.9M km</span></div>
+          <div class="p-row"><span class="pi">🌡️</span><span class="pl">Temp:</span><span class="pv">−180 to 430°C</span></div>
+          <div class="p-row"><span class="pi">🌙</span><span class="pl">Moons:</span><span class="pv">0</span></div>
+        </div>
+      </div>
+
+      <!-- ── Venus ──────────────────────────────────────────────── -->
+      <div class="planet-card" style="--p-color: #e8c97e;">
+        <div class="planet-icon"
+             style="box-shadow: 0 0 14px rgba(232,201,126,0.55),
+                                0 0 35px rgba(232,201,126,0.22),
+                                inset 0 0 14px rgba(0,0,0,0.35);
+                    --p-color: #e8c97e;"></div>
+        <p class="planet-name">Venus</p>
+        <div class="planet-info">
+          <div class="p-row"><span class="pi">📏</span><span class="pl">Diameter:</span><span class="pv">12,104 km</span></div>
+          <div class="p-row"><span class="pi">☀️</span><span class="pl">Distance:</span><span class="pv">108.2M km</span></div>
+          <div class="p-row"><span class="pi">🌡️</span><span class="pl">Temp:</span><span class="pv">avg 465°C</span></div>
+          <div class="p-row"><span class="pi">🌙</span><span class="pl">Moons:</span><span class="pv">0</span></div>
+        </div>
+      </div>
+
+      <!-- ── Earth ──────────────────────────────────────────────── -->
+      <div class="planet-card" style="--p-color: #4fc3f7;">
+        <div class="planet-icon"
+             style="box-shadow: 0 0 14px rgba(79,195,247,0.55),
+                                0 0 35px rgba(79,195,247,0.22),
+                                inset 0 0 14px rgba(0,0,0,0.35);
+                    --p-color: #4fc3f7;"></div>
+        <p class="planet-name">Earth</p>
+        <div class="planet-info">
+          <div class="p-row"><span class="pi">📏</span><span class="pl">Diameter:</span><span class="pv">12,742 km</span></div>
+          <div class="p-row"><span class="pi">☀️</span><span class="pl">Distance:</span><span class="pv">149.6M km</span></div>
+          <div class="p-row"><span class="pi">🌡️</span><span class="pl">Temp:</span><span class="pv">−88 to 58°C</span></div>
+          <div class="p-row"><span class="pi">🌙</span><span class="pl">Moons:</span><span class="pv">1</span></div>
+        </div>
+      </div>
+
+      <!-- ── Mars ───────────────────────────────────────────────── -->
+      <div class="planet-card" style="--p-color: #e27b58;">
+        <div class="planet-icon"
+             style="box-shadow: 0 0 14px rgba(226,123,88,0.55),
+                                0 0 35px rgba(226,123,88,0.22),
+                                inset 0 0 14px rgba(0,0,0,0.35);
+                    --p-color: #e27b58;"></div>
+        <p class="planet-name">Mars</p>
+        <div class="planet-info">
+          <div class="p-row"><span class="pi">📏</span><span class="pl">Diameter:</span><span class="pv">6,779 km</span></div>
+          <div class="p-row"><span class="pi">☀️</span><span class="pl">Distance:</span><span class="pv">227.9M km</span></div>
+          <div class="p-row"><span class="pi">🌡️</span><span class="pl">Temp:</span><span class="pv">−140 to 20°C</span></div>
+          <div class="p-row"><span class="pi">🌙</span><span class="pl">Moons:</span><span class="pv">2</span></div>
+        </div>
+      </div>
+
+      <!-- ── Jupiter ────────────────────────────────────────────── -->
+      <div class="planet-card" style="--p-color: #c88b3a;">
+        <div class="planet-icon"
+             style="box-shadow: 0 0 14px rgba(200,139,58,0.55),
+                                0 0 35px rgba(200,139,58,0.22),
+                                inset 0 0 14px rgba(0,0,0,0.35);
+                    --p-color: #c88b3a;"></div>
+        <p class="planet-name">Jupiter</p>
+        <div class="planet-info">
+          <div class="p-row"><span class="pi">📏</span><span class="pl">Diameter:</span><span class="pv">139,820 km</span></div>
+          <div class="p-row"><span class="pi">☀️</span><span class="pl">Distance:</span><span class="pv">778.5M km</span></div>
+          <div class="p-row"><span class="pi">🌡️</span><span class="pl">Temp:</span><span class="pv">−110°C (cloud)</span></div>
+          <div class="p-row"><span class="pi">🌙</span><span class="pl">Moons:</span><span class="pv">95</span></div>
+        </div>
+      </div>
+
+      <!-- ── Saturn ─────────────────────────────────────────────── -->
+      <div class="planet-card" style="--p-color: #e4d191;">
+        <!-- has-ring adds the CSS ring via ::after pseudo-element -->
+        <div class="planet-icon has-ring"
+             style="box-shadow: 0 0 14px rgba(228,209,145,0.55),
+                                0 0 35px rgba(228,209,145,0.22),
+                                inset 0 0 14px rgba(0,0,0,0.35);
+                    --p-color: #e4d191;"></div>
+        <p class="planet-name">Saturn</p>
+        <div class="planet-info">
+          <div class="p-row"><span class="pi">📏</span><span class="pl">Diameter:</span><span class="pv">116,460 km</span></div>
+          <div class="p-row"><span class="pi">☀️</span><span class="pl">Distance:</span><span class="pv">1.43B km</span></div>
+          <div class="p-row"><span class="pi">🌡️</span><span class="pl">Temp:</span><span class="pv">−140°C (cloud)</span></div>
+          <div class="p-row"><span class="pi">🌙</span><span class="pl">Moons:</span><span class="pv">146</span></div>
+        </div>
+      </div>
+
+      <!-- ── Uranus ─────────────────────────────────────────────── -->
+      <div class="planet-card" style="--p-color: #7de8e8;">
+        <div class="planet-icon"
+             style="box-shadow: 0 0 14px rgba(125,232,232,0.55),
+                                0 0 35px rgba(125,232,232,0.22),
+                                inset 0 0 14px rgba(0,0,0,0.35);
+                    --p-color: #7de8e8;"></div>
+        <p class="planet-name">Uranus</p>
+        <div class="planet-info">
+          <div class="p-row"><span class="pi">📏</span><span class="pl">Diameter:</span><span class="pv">50,724 km</span></div>
+          <div class="p-row"><span class="pi">☀️</span><span class="pl">Distance:</span><span class="pv">2.87B km</span></div>
+          <div class="p-row"><span class="pi">🌡️</span><span class="pl">Temp:</span><span class="pv">−195°C</span></div>
+          <div class="p-row"><span class="pi">🌙</span><span class="pl">Moons:</span><span class="pv">28</span></div>
+        </div>
+      </div>
+
+      <!-- ── Neptune ────────────────────────────────────────────── -->
+      <div class="planet-card" style="--p-color: #4b70dd;">
+        <div class="planet-icon"
+             style="box-shadow: 0 0 14px rgba(75,112,221,0.55),
+                                0 0 35px rgba(75,112,221,0.22),
+                                inset 0 0 14px rgba(0,0,0,0.35);
+                    --p-color: #4b70dd;"></div>
+        <p class="planet-name">Neptune</p>
+        <div class="planet-info">
+          <div class="p-row"><span class="pi">📏</span><span class="pl">Diameter:</span><span class="pv">49,244 km</span></div>
+          <div class="p-row"><span class="pi">☀️</span><span class="pl">Distance:</span><span class="pv">4.50B km</span></div>
+          <div class="p-row"><span class="pi">🌡️</span><span class="pl">Temp:</span><span class="pv">−200°C</span></div>
+          <div class="p-row"><span class="pi">🌙</span><span class="pl">Moons:</span><span class="pv">16</span></div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ──────────────────────────────────────────────────────────────────
+       CONTROLS — visual keyboard display + mouse & menu cards + ticker
+       Left column : CSS-styled 3-D key buttons (arrow cluster + shorts).
+       Right column: glassmorphism cards for right-click / speed / focus.
+       Bottom      : infinite-scroll tips ticker with fade edge masks.
+  ────────────────────────────────────────────────────────────────────── -->
+  <section id="controls" aria-labelledby="controls-heading">
+
+    <div class="section-header">
+      <p class="section-tag">How to Fly</p>
+      <h2 class="section-title" id="controls-heading">Controls &amp; Navigation</h2>
+      <div class="section-divider"></div>
+      <p class="section-desc">All controls work inside the PyOpenGL simulation window.</p>
+    </div>
+
+    <!-- ── Two-column layout ─────────────────────────────────────── -->
+    <div class="controls-layout">
+
+      <!-- ════════════════════════════════════════════════════════════
+           LEFT COLUMN — Visual Keyboard
+      ════════════════════════════════════════════════════════════════ -->
+      <div class="ctrl-left">
+        <p class="ctrl-col-title">⌨️ Keyboard Controls</p>
+
+        <!-- Arrow key cluster: named grid areas (. up / left down right) -->
+        <div class="arrow-cluster" aria-label="Arrow keys">
+          <div class="kbd k-up"   title="Tilt camera up">↑</div>
+          <div class="kbd k-left" title="Orbit left">←</div>
+          <div class="kbd k-down" title="Tilt camera down">↓</div>
+          <div class="kbd k-right" title="Orbit right">→</div>
+        </div>
+
+        <!-- Label row 1: only the Up label (centre column) -->
+        <div class="arrow-labels">
+          <div></div>
+          <div class="arrow-label">Tilt Up</div>
+          <div></div>
+        </div>
+
+        <!-- Label row 2: Left / Down / Right labels -->
+        <div class="arrow-labels" style="margin-top: -0.9rem; margin-bottom: 1.6rem;">
+          <div class="arrow-label">Orbit<br>Left</div>
+          <div class="arrow-label">Tilt<br>Down</div>
+          <div class="arrow-label">Orbit<br>Right</div>
+        </div>
+
+        <!-- Individual shortcut keys -->
+        <div class="key-shortcut">
+          <div class="kbd" title="Zoom in">+</div>
+          <span class="ks-desc"><strong>Zoom In</strong> — move camera closer (min 10 u)</span>
+        </div>
+        <div class="key-shortcut">
+          <div class="kbd" title="Zoom out">−</div>
+          <span class="ks-desc"><strong>Zoom Out</strong> — move camera farther (max 150 u)</span>
+        </div>
+        <div class="key-shortcut">
+          <div class="kbd" title="Pause">P</div>
+          <span class="ks-desc"><strong>Pause</strong> — freeze / resume all planet orbits</span>
+        </div>
+        <div class="key-shortcut">
+          <div class="kbd" title="Reset camera">R</div>
+          <span class="ks-desc"><strong>Reset View</strong> — restore default camera position</span>
+        </div>
+        <div class="key-shortcut">
+          <div class="kbd kbd-wide" title="Exit">ESC</div>
+          <span class="ks-desc"><strong>Exit</strong> — close the simulation window</span>
+        </div>
+
+      </div><!-- /.ctrl-left -->
+
+      <!-- ════════════════════════════════════════════════════════════
+           RIGHT COLUMN — Mouse & Menu Controls
+      ════════════════════════════════════════════════════════════════ -->
+      <div class="ctrl-right">
+        <p class="ctrl-col-title">🖱️ Mouse &amp; Menu</p>
+
+        <div class="mouse-cards">
+
+          <!-- Card 1: Right-click context menu -->
+          <div class="mouse-card">
+            <div class="mouse-card-header">
+              <span class="mouse-card-icon">🖱️</span>
+              <span class="mouse-card-title">Right Click — Scene Menu</span>
+            </div>
+            <p>Right-click anywhere in the window to open the context menu.</p>
+            <ul>
+              <li>Focus Planet — jump camera to any of the 8 planets</li>
+              <li>Change Speed — Slow (0.3×) · Normal (1×) · Fast (3×)</li>
+              <li>Toggle Labels — show or hide planet name overlays</li>
+              <li>Reset View — return to the default camera angle</li>
+              <li>Exit — close the simulation cleanly</li>
+            </ul>
+          </div>
+
+          <!-- Card 2: Focus Planet (mini panel preview) -->
+          <div class="mouse-card" style="border-left-color: var(--accent);">
+            <div class="mouse-card-header">
+              <span class="mouse-card-icon">🪐</span>
+              <span class="mouse-card-title">Focus Planet</span>
+            </div>
+            <p>Select any planet from the right-click submenu to zoom the
+               camera directly toward it at the right distance and angle.</p>
+            <!-- Simulates what the submenu looks like -->
+            <div class="mini-panel" aria-label="Menu preview">
+              Focus Planet ▶ &nbsp;Mercury · Venus · Earth · Mars ·
+              Jupiter · Saturn · Uranus · Neptune
+            </div>
+          </div>
+
+          <!-- Card 3: Speed submenu -->
+          <div class="mouse-card" style="border-left-color: var(--primary);">
+            <div class="mouse-card-header">
+              <span class="mouse-card-icon">⚡</span>
+              <span class="mouse-card-title">Speed Control</span>
+            </div>
+            <p>Adjust the global orbit speed from the Speed submenu at any time
+               — even while the simulation is running.</p>
+            <ul>
+              <li>Slow (0.3×) — ideal for close-up observation</li>
+              <li>Normal (1×) — default real-time simulation rate</li>
+              <li>Fast (3×) — watch full planetary orbits quickly</li>
+            </ul>
+          </div>
+
+        </div><!-- /.mouse-cards -->
+      </div><!-- /.ctrl-right -->
+
+    </div><!-- /.controls-layout -->
+
+    <!-- ── Tips ticker — duplicated text for seamless infinite loop ── -->
+    <div class="tips-ticker-wrap" aria-label="Tips and hints">
+      <div class="tips-ticker" aria-hidden="true">
+        <!-- Set A -->
+        <span>💡 Press <strong>P</strong> to pause anytime</span>
+        <span>🪐 Right-click to focus any planet instantly</span>
+        <span>⌨️ Use <strong>+</strong> / <strong>−</strong> to zoom in and out</span>
+        <span>🌟 Watch the asteroid belt between Mars and Jupiter</span>
+        <span>🎥 Arrow keys let you freely orbit the whole solar system</span>
+        <span>🔴 Press <strong>R</strong> to snap back to the default view</span>
+        <span>🌙 Earth's Moon orbits in real time — zoom in close!</span>
+        <!-- Set B — exact duplicate so translateX(-50%) loops seamlessly -->
+        <span>💡 Press <strong>P</strong> to pause anytime</span>
+        <span>🪐 Right-click to focus any planet instantly</span>
+        <span>⌨️ Use <strong>+</strong> / <strong>−</strong> to zoom in and out</span>
+        <span>🌟 Watch the asteroid belt between Mars and Jupiter</span>
+        <span>🎥 Arrow keys let you freely orbit the whole solar system</span>
+        <span>🔴 Press <strong>R</strong> to snap back to the default view</span>
+        <span>🌙 Earth's Moon orbits in real time — zoom in close!</span>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- ──────────────────────────────────────────────────────────────────
+       ABOUT — project details and tech stack
+  ────────────────────────────────────────────────────────────────────── -->
+  <section id="about" aria-labelledby="about-heading">
+    <div class="about-inner">
+
+      <div class="about-text">
+        <h2 id="about-heading">About the Project</h2>
+        <p>
+          
+          <strong></strong> .
+          The project demonstrates core Computer Graphics concepts including 3D
+          transformations, OpenGL lighting models, blending, and interactive
+          camera control.
+        </p>
+        <p>
+          All 8 planets orbit with realistic axial tilts, self-rotation speeds,
+          atmospheric glow layers, and a physically-derived camera that uses
+          spherical coordinates to orbit freely around the solar system.
+        </p>
+       
+
+  </section>
+
+
+
+  <!-- ──────────────────────────────────────────────────────────────────
+       FOOTER — project info, icon badges, copyright
+  ────────────────────────────────────────────────────────────────────── -->
+  <footer>
+
+    <div class="footer-logo">🪐 Solar System Simulation</div>
+
+  
+    <p class="footer-line">
+      
+    </p>
+    <p class="footer-line">
+     
+    </p>
+
+    <!-- icon badge row: GitHub · Python · OpenGL placeholders -->
+    <div class="footer-icons" aria-label="Technology links">
+      <a href="#" class="footer-icon" title="GitHub" aria-label="GitHub">🐙</a>
+      <a href="#" class="footer-icon" title="Python"  aria-label="Python">🐍</a>
+      <a href="#" class="footer-icon" title="OpenGL"  aria-label="OpenGL">🎮</a>
+      <a href="#" class="footer-icon" title="Project" aria-label="Project">🪐</a>
+    </div>
+
+  </footer>
+
+  <!-- ================================================================
+       SOLAR SYSTEM CANVAS SIMULATION
+       Implements the same CG pipeline as the PyOpenGL source files:
+         planets.py  → PLANETS / SUN_DATA / update_planets()
+         camera.py   → cam state, apply_camera() (gluLookAt spherical)
+         renderer.py → draw_starfield/nebula/orbit_ring/asteroid_belt/
+                       draw_sun/draw_planet/_draw_saturn_rings/
+                       _draw_atmosphere/_draw_moon
+         ui.py       → draw_hud / draw_planet_labels
+         main.py     → display() render loop, setup_lighting(), reshape()
+  ================================================================ -->
+  <script>
+  (function () {
+    'use strict';
+
+    // ================================================================
+    // PLANET DATA — exact copy from planets.py
+    // ================================================================
+    const SUN_DATA = { name: 'Sun', size: 2.5, color: [1.0, 0.92, 0.10] };
+
+    const PLANETS = [
+      { name:'Mercury', distance:6.0,  size:0.35, color:[0.72,0.60,0.50], speed:47.0,  angle:0,    tilt:0.03,  spin_speed:10.0,   spin_angle:0 },
+      { name:'Venus',   distance:9.0,  size:0.60, color:[0.95,0.78,0.42], speed:35.0,  angle:0,    tilt:177.4, spin_speed:-4.0,   spin_angle:0 },
+      { name:'Earth',   distance:13.0, size:0.65, color:[0.18,0.48,0.90], speed:29.0,  angle:0,    tilt:23.4,  spin_speed:120.0,  spin_angle:0,
+        moon:{ name:'Moon', distance:1.8, size:0.18, color:[0.75,0.73,0.70], speed:200.0, angle:45.0 } },
+      { name:'Mars',    distance:17.0, size:0.45, color:[0.85,0.33,0.18], speed:24.0,  angle:0,    tilt:25.2,  spin_speed:115.0,  spin_angle:0 },
+      { name:'Jupiter', distance:24.0, size:1.55, color:[0.85,0.68,0.48], speed:13.0,  angle:0,    tilt:3.1,   spin_speed:500.0,  spin_angle:0 },
+      { name:'Saturn',  distance:32.0, size:1.30, color:[0.92,0.82,0.58], speed:9.7,   angle:0,    tilt:26.7,  spin_speed:450.0,  spin_angle:0 },
+      { name:'Uranus',  distance:40.0, size:0.95, color:[0.55,0.88,0.93], speed:6.8,   angle:0,    tilt:97.8,  spin_speed:-180.0, spin_angle:0 },
+      { name:'Neptune', distance:48.0, size:0.90, color:[0.20,0.38,0.98], speed:5.4,   angle:0,    tilt:28.3,  spin_speed:165.0,  spin_angle:0 },
+    ];
+
+    // ================================================================
+    // CAMERA STATE — mirrors camera.py module-level vars
+    // ================================================================
+    const cam = { distance:60.0, angle_x:20.0, angle_y:0.0 };
+    let paused = false;
+    let speedMult = 1.0;
+
+    // ================================================================
+    // SEEDED PRNG (Mulberry32) — reproduces renderer.py static data
+    // ================================================================
+    function makeRng(seed) {
+      return function () {
+        seed = (seed + 0x6d2b79f5) >>> 0;
+        let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+        t ^= t + Math.imul(t ^ (t >>> 7), 61 | t);
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+      };
+    }
+    // Box-Muller — mirrors Python's random.gauss(0, σ)
+    function gauss(rng, sigma) {
+      let u = 0, v = 0;
+      while (!u) u = rng();
+      while (!v) v = rng();
+      return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v) * sigma;
+    }
+
+    // ── Stars (seed=42, 600 stars) — renderer.py ─────────────────────
+    const STARS = [];
+    {
+      const rng = makeRng(42);
+      for (let i = 0; i < 600; i++) {
+        const x = rng()*600-300, y = rng()*400-200, z = rng()*600-300;
+        const roll = rng();
+        let size, brightness;
+        if      (roll > 0.95) { size=2.5; brightness=0.88+rng()*0.12; }
+        else if (roll > 0.80) { size=1.8; brightness=0.65+rng()*0.35; }
+        else                  { size=1.0; brightness=0.28+rng()*0.50; }
+        const tint = rng();
+        let color;
+        if      (tint > 0.90) color=[brightness*0.70,brightness*0.80,brightness];
+        else if (tint > 0.80) color=[brightness,brightness*0.85,brightness*0.50];
+        else                  color=[brightness,brightness,brightness];
+        STARS.push({x,y,z,size,color});
+      }
+    }
+
+    // ── Nebula (seed=99) — renderer.py ────────────────────────────────
+    const NEBULA = [];
+    {
+      const rng = makeRng(99);
+      const defs = [
+        [[-210, 65,-195],[0.55,0.15,0.85],70],
+        [[ 185,-75, 215],[0.15,0.45,0.95],65],
+        [[-115, 95, 255],[0.95,0.35,0.15],60],
+        [[ 265,-25,-140],[0.20,0.80,0.60],55],
+        [[  55,155,-260],[0.80,0.70,0.20],50],
+      ];
+      for (const [[cx,cy,cz],[nr,ng,nb],cnt] of defs) {
+        for (let i=0;i<cnt;i++) {
+          const br=0.18+rng()*0.37;
+          const sz=[1.0,1.0,1.5,2.0][Math.floor(rng()*4)];
+          NEBULA.push({x:cx+gauss(rng,22),y:cy+gauss(rng,14),z:cz+gauss(rng,22),
+                       r:nr*br,g:ng*br,b:nb*br,size:sz});
+        }
+      }
+    }
+
+    // ── Asteroid belt (seed=7, 280 rocks) — renderer.py ──────────────
+    const ASTEROIDS = [];
+    {
+      const rng = makeRng(7);
+      for (let i=0;i<280;i++) {
+        const radius=19.5+rng()*3.0, ang=rng()*2*Math.PI, h=rng()*0.90-0.45;
+        const br=0.38+rng()*0.30;
+        ASTEROIDS.push({x:radius*Math.cos(ang),y:h,z:radius*Math.sin(ang),
+                        color:[br*0.80,br*0.72,br*0.58],large:rng()>0.75});
+      }
+    }
+
+    // ================================================================
+    // 4×4 MATRIX LIBRARY — column-major (OpenGL convention)
+    // Mirrors the transforms used by glRotatef / glTranslatef /
+    // gluLookAt / gluPerspective inside main.py and camera.py
+    // ================================================================
+    const m4={
+      id:()=>new Float64Array([1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1]),
+
+      mul(a,b){
+        const r=new Float64Array(16);
+        for(let c=0;c<4;c++) for(let row=0;row<4;row++){
+          let s=0; for(let k=0;k<4;k++) s+=a[k*4+row]*b[c*4+k];
+          r[c*4+row]=s;
+        }
+        return r;
+      },
+
+      // Apply matrix to homogeneous 4-vector
+      tv(m,v){
+        return[m[0]*v[0]+m[4]*v[1]+m[ 8]*v[2]+m[12]*v[3],
+               m[1]*v[0]+m[5]*v[1]+m[ 9]*v[2]+m[13]*v[3],
+               m[2]*v[0]+m[6]*v[1]+m[10]*v[2]+m[14]*v[3],
+               m[3]*v[0]+m[7]*v[1]+m[11]*v[2]+m[15]*v[3]];
+      },
+
+      // glRotatef(angle, 0,1,0) — Y-axis orbit rotation
+      rotY(a){const c=Math.cos(a),s=Math.sin(a);
+        return new Float64Array([c,0,-s,0, 0,1,0,0, s,0,c,0, 0,0,0,1]);},
+
+      // glRotatef(tilt, 0,0,1) — Z-axis axial tilt
+      rotZ(a){const c=Math.cos(a),s=Math.sin(a);
+        return new Float64Array([c,s,0,0, -s,c,0,0, 0,0,1,0, 0,0,0,1]);},
+
+      // glTranslatef(tx,ty,tz)
+      tr(tx,ty,tz){const m=m4.id();m[12]=tx;m[13]=ty;m[14]=tz;return m;},
+
+      // gluLookAt — builds view matrix from spherical camera (camera.py)
+      lookAt(ex,ey,ez){
+        const [fx,fy,fz]=v3.norm([-ex,-ey,-ez]);
+        const [rx,ry,rz]=v3.norm(v3.cross([fx,fy,fz],[0,1,0]));
+        const [ux,uy,uz]=v3.cross([rx,ry,rz],[fx,fy,fz]);
+        return new Float64Array([
+          rx,ux,-fx,0,  ry,uy,-fy,0,  rz,uz,-fz,0,
+          -(rx*ex+ry*ey+rz*ez),-(ux*ex+uy*ey+uz*ez),(fx*ex+fy*ey+fz*ez),1
+        ]);
+      },
+
+      // gluPerspective(45, aspect, 0.1, 1200) — main.py reshape()
+      persp(fovDeg,asp,near,far){
+        const f=1/Math.tan(fovDeg*Math.PI/360), nf=1/(near-far);
+        return new Float64Array([
+          f/asp,0,0,0,  0,f,0,0,
+          0,0,(far+near)*nf,-1,  0,0,2*far*near*nf,0
+        ]);
+      },
+    };
+
+    // Simple 3-vector helpers
+    const v3={
+      norm([x,y,z]){const l=Math.sqrt(x*x+y*y+z*z)||1;return[x/l,y/l,z/l];},
+      cross([ax,ay,az],[bx,by,bz]){return[ay*bz-az*by,az*bx-ax*bz,ax*by-ay*bx];},
+      dot([ax,ay,az],[bx,by,bz]){return ax*bx+ay*by+az*bz;},
+    };
+
+    // ================================================================
+    // PROJECTION — maps 3-D world coords → 2-D canvas pixels
+    // Equivalent to glViewport + gluPerspective + gluLookAt pipeline
+    // ================================================================
+    let VP=m4.id(), VIEW=m4.id(), CW=0, CH=0;
+
+    function project(wx,wy,wz){
+      const c=m4.tv(VP,[wx,wy,wz,1]);
+      if(c[3]<=0.001) return null;
+      const nx=c[0]/c[3], ny=c[1]/c[3], nz=c[2]/c[3];
+      if(nz<-1||nz>1.0) return null;
+      return{x:(nx+1)*CW*0.5, y:(1-ny)*CH*0.5, nz};
+    }
+
+    // Eye-space z (more negative = farther from camera)
+    function eyeZ(wx,wy,wz){
+      return m4.tv(VIEW,[wx,wy,wz,1])[2];
+    }
+
+    // Apparent pixel scale at a world point (pixels per OpenGL unit)
+    function scaleAt(wx,wy,wz){
+      const p0=project(wx,wy,wz), p1=project(wx,wy+1,wz);
+      if(!p0||!p1) return 8;
+      return Math.abs(p1.y-p0.y);
+    }
+
+    // ================================================================
+    // PLANET MODEL MATRIX — mirrors draw_planet() transforms:
+    //   glRotatef(angle,0,1,0) * glTranslatef(dist,0,0) * glRotatef(tilt,0,0,1)
+    // ================================================================
+    function planetMatrix(p){
+      return m4.mul(m4.mul(m4.rotY(p.angle*Math.PI/180), m4.tr(p.distance,0,0)),
+                    m4.rotZ(p.tilt*Math.PI/180));
+    }
+
+    function localToWorld(mat,lx,ly,lz){
+      const v=m4.tv(mat,[lx,ly,lz,1]); return[v[0],v[1],v[2]];
+    }
+
+    // ================================================================
+    // CANVAS SETUP — mirrors reshape() in main.py
+    // ================================================================
+    const canvas=document.getElementById('solar-canvas');
+    const ctx=canvas.getContext('2d');
+
+    function resize(){
+      const w=canvas.parentElement.clientWidth;
+      const h=Math.min(Math.max(w*0.52,340),560);
+      canvas.width=w; canvas.height=h; CW=w; CH=h;
+    }
+    resize();
+    window.addEventListener('resize',resize);
+
+    // ================================================================
+    // update_planets() — exact delta-time logic from planets.py
+    // ================================================================
+    function updatePlanets(dt){
+      for(const p of PLANETS){
+        p.angle      =(p.angle      +p.speed      *dt)%360;
+        p.spin_angle =(p.spin_angle +p.spin_speed *dt)%360;
+        if(p.moon) p.moon.angle=(p.moon.angle+p.moon.speed*dt)%360;
+      }
+    }
+
+    // ================================================================
+    // DRAWING FUNCTIONS — each mirrors its renderer.py counterpart
+    // ================================================================
+
+    // draw_starfield() — 3-size-layer star background
+    function drawStarfield(){
+      for(const s of STARS){
+        const p=project(s.x,s.y,s.z); if(!p) continue;
+        const r=s.size<=1.0?0.55:s.size<=1.8?0.95:1.4;
+        const [cr,cg,cb]=s.color;
+        ctx.fillStyle=`rgb(${(cr*255)|0},${(cg*255)|0},${(cb*255)|0})`;
+        ctx.beginPath(); ctx.arc(p.x,p.y,r,0,6.283); ctx.fill();
+      }
+    }
+
+    // draw_nebula() — coloured point-cloud clusters
+    function drawNebula(){
+      for(const n of NEBULA){
+        const p=project(n.x,n.y,n.z); if(!p) continue;
+        const r=n.size<=1.0?0.6:n.size<=1.5?0.95:1.4;
+        ctx.fillStyle=`rgb(${(n.r*255)|0},${(n.g*255)|0},${(n.b*255)|0})`;
+        ctx.beginPath(); ctx.arc(p.x,p.y,r,0,6.283); ctx.fill();
+      }
+    }
+
+    // draw_orbit_ring() — dashed projected ellipse, planet-tinted
+    function drawOrbitRing(dist,color){
+      const [pr,pg,pb]=color;
+      const cr=pr*0.18+0.20,cg=pg*0.18+0.20,cb=pb*0.18+0.24;
+      ctx.strokeStyle=`rgba(${(cr*255)|0},${(cg*255)|0},${(cb*255)|0},0.65)`;
+      ctx.lineWidth=0.6; ctx.setLineDash([3.5,4]);
+      ctx.beginPath(); let first=true;
+      for(let i=0;i<=120;i++){
+        const a=2*Math.PI*i/120;
+        const p=project(dist*Math.cos(a),0,-dist*Math.sin(a));
+        if(!p){first=true;continue;}
+        first?(ctx.moveTo(p.x,p.y),first=false):ctx.lineTo(p.x,p.y);
+      }
+      ctx.stroke(); ctx.setLineDash([]);
+    }
+
+    // draw_asteroid_belt()
+    function drawAsteroidBelt(){
+      for(const a of ASTEROIDS){
+        const p=project(a.x,a.y,a.z); if(!p) continue;
+        const [r,g,b]=a.color;
+        ctx.fillStyle=`rgb(${(r*255)|0},${(g*255)|0},${(b*255)|0})`;
+        ctx.beginPath(); ctx.arc(p.x,p.y,a.large?1.05:0.65,0,6.283); ctx.fill();
+      }
+    }
+
+    // draw_sun() — solid core + layered corona halos (renderer.py)
+    function drawSun(){
+      const p=project(0,0,0); if(!p) return;
+      const sc=scaleAt(0,0,0)*SUN_DATA.size;
+      // Outer to inner halos — glBlendFunc(SRC_ALPHA, ONE_MINUS_SRC_ALPHA)
+      const halos=[
+        {m:5.5, r:1.00,g:0.38,b:0.04,a:0.035},
+        {m:3.6, r:1.00,g:0.50,b:0.05,a:0.07 },
+        {m:2.2, r:1.00,g:0.80,b:0.12,a:0.15 },
+        {m:1.38,r:1.00,g:0.95,b:0.42,a:0.30 },
+        {m:1.30,r:1.00,g:0.80,b:0.00,a:0.15 },
+      ];
+      for(const h of halos){
+        const rad=sc*h.m;
+        const g=ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,rad);
+        g.addColorStop(0,`rgba(${(h.r*255)|0},${(h.g*255)|0},${(h.b*255)|0},${h.a})`);
+        g.addColorStop(1,'rgba(0,0,0,0)');
+        ctx.fillStyle=g; ctx.beginPath(); ctx.arc(p.x,p.y,rad,0,6.283); ctx.fill();
+      }
+      // Solid core — glutSolidSphere equivalent
+      const cg=ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,sc);
+      cg.addColorStop(0.0,'rgb(255,255,220)');
+      cg.addColorStop(0.5,'rgb(255,247,80)');
+      cg.addColorStop(1.0,'rgb(255,195,0)');
+      ctx.fillStyle=cg; ctx.beginPath(); ctx.arc(p.x,p.y,sc,0,6.283); ctx.fill();
+    }
+
+    // _draw_atmosphere() — translucent glow shell (renderer.py)
+    const ATM={
+      Venus:  [1.00,0.88,0.38,0.13],
+      Earth:  [0.22,0.52,1.00,0.14],
+      Neptune:[0.18,0.38,1.00,0.12],
+      Uranus: [0.48,0.90,0.96,0.11],
+    };
+    function drawAtmosphere(name,px,py,radius){
+      const a=ATM[name]; if(!a) return;
+      const [r,g,b,al]=a;
+      const atmR=radius*1.28;
+      const grad=ctx.createRadialGradient(px,py,radius*0.72,px,py,atmR);
+      grad.addColorStop(0,`rgba(${(r*255)|0},${(g*255)|0},${(b*255)|0},${al})`);
+      grad.addColorStop(1,'rgba(0,0,0,0)');
+      ctx.fillStyle=grad; ctx.beginPath(); ctx.arc(px,py,atmR,0,6.283); ctx.fill();
+    }
+
+    // _draw_saturn_rings() — multi-band ring system split front/back
+    // Painter's algorithm: back half before planet, front half after
+    const RING_BANDS=[
+      {im:1.45,om:1.72,r:0.75,g:0.68,b:0.48,a:0.50},  // C ring
+      {im:1.72,om:2.12,r:0.92,g:0.84,b:0.62,a:0.80},  // B ring (brightest)
+      {im:2.12,om:2.25,r:0.30,g:0.28,b:0.20,a:0.20},  // Cassini division gap
+      {im:2.25,om:2.58,r:0.88,g:0.80,b:0.58,a:0.68},  // A ring
+    ];
+    function drawSaturnRingHalf(pmat,psize,front,planetEyeZ){
+      const [cx,cy,cz]=localToWorld(pmat,0,0,0);
+      const segs=72;
+      for(const band of RING_BANDS){
+        const rr=(band.r*255)|0,rg=(band.g*255)|0,rb=(band.b*255)|0;
+        for(let i=0;i<segs;i++){
+          const a0=2*Math.PI*i/segs, a1=2*Math.PI*(i+1)/segs;
+          const c0=Math.cos(a0),s0=Math.sin(a0),c1=Math.cos(a1),s1=Math.sin(a1);
+          // outer and inner points in planet local XZ plane
+          const ow0=localToWorld(pmat,band.om*psize*c0,0,band.om*psize*s0);
+          const ow1=localToWorld(pmat,band.om*psize*c1,0,band.om*psize*s1);
+          const iw0=localToWorld(pmat,band.im*psize*c0,0,band.im*psize*s0);
+          const iw1=localToWorld(pmat,band.im*psize*c1,0,band.im*psize*s1);
+          // Only draw the correct half relative to planet center
+          const ez=eyeZ(ow0[0],ow0[1],ow0[2]);
+          const isFront=(ez>planetEyeZ);
+          if(isFront!==front) continue;
+          const p0=project(ow0[0],ow0[1],ow0[2]);
+          const p1=project(ow1[0],ow1[1],ow1[2]);
+          const q0=project(iw0[0],iw0[1],iw0[2]);
+          const q1=project(iw1[0],iw1[1],iw1[2]);
+          if(!p0||!p1||!q0||!q1) continue;
+          ctx.beginPath();
+          ctx.moveTo(p0.x,p0.y); ctx.lineTo(p1.x,p1.y);
+          ctx.lineTo(q1.x,q1.y); ctx.lineTo(q0.x,q0.y);
+          ctx.closePath();
+          ctx.fillStyle=`rgba(${rr},${rg},${rb},${band.a})`;
+          ctx.fill();
+        }
+      }
+    }
+
+    // draw_planet() — Phong-lit sphere (Gouraud shading via radial gradient)
+    // GL_LIGHT0 at origin → light direction = normalize(sun_pos - planet_pos)
+    // GL_AMBIENT=0.08, GL_DIFFUSE weighted by sun angle
+    function drawPlanetBody(planet,pmat){
+      const [wx,wy,wz]=localToWorld(pmat,0,0,0);
+      const pp=project(wx,wy,wz); if(!pp) return null;
+      const sc=scaleAt(wx,wy,wz);
+      const pr=Math.max(2,sc*planet.size);
+      // Compute 2-D light offset: project sun, point gradient focal toward it
+      const sp=project(0,0,0);
+      let lox=0,loy=0;
+      if(sp){const dx=sp.x-pp.x,dy=sp.y-pp.y,l=Math.sqrt(dx*dx+dy*dy)||1;
+        lox=(dx/l)*pr*0.42; loy=(dy/l)*pr*0.42;}
+      const [r,g,b]=planet.color;
+      // Radial gradient: lit focal point offset toward sun = diffuse + specular
+      const grad=ctx.createRadialGradient(pp.x+lox,pp.y+loy,0,pp.x,pp.y,pr);
+      // Specular highlight (GL_SHININESS=20)
+      grad.addColorStop(0.00,`rgb(${Math.min(255,(r*255+55)|0)},${Math.min(255,(g*255+55)|0)},${Math.min(255,(b*255+55)|0)})`);
+      // Full diffuse
+      grad.addColorStop(0.35,`rgb(${(r*255)|0},${(g*255)|0},${(b*255)|0})`);
+      // Ambient only (GL_AMBIENT_AND_DIFFUSE = 0.08)
+      grad.addColorStop(1.00,`rgb(${(r*20)|0},${(g*20)|0},${(b*20)|0})`);
+      ctx.fillStyle=grad;
+      ctx.beginPath(); ctx.arc(pp.x,pp.y,pr,0,6.283); ctx.fill();
+      return{px:pp.x,py:pp.y,pr};
+    }
+
+    // _draw_moon() — Earth's natural satellite in tilted planet frame
+    function drawMoon(moon,pmat){
+      const a=moon.angle*Math.PI/180;
+      const [wx,wy,wz]=localToWorld(pmat,moon.distance*Math.cos(a),0,moon.distance*Math.sin(a));
+      const mp=project(wx,wy,wz); if(!mp) return;
+      const mr=Math.max(1.5,scaleAt(wx,wy,wz)*moon.size);
+      const [r,g,b]=moon.color;
+      ctx.fillStyle=`rgb(${(r*255)|0},${(g*255)|0},${(b*255)|0})`;
+      ctx.beginPath(); ctx.arc(mp.x,mp.y,mr,0,6.283); ctx.fill();
+    }
+
+    // draw_planet_labels() — ui.py: name text above each planet
+    // Mirrors gluProject world→screen in ui.py draw_planet_labels()
+    function drawLabels(){
+      ctx.save();
+      ctx.font='11px "Exo 2",sans-serif';
+      ctx.fillStyle='rgba(220,220,240,0.9)';
+      ctx.textAlign='center';
+      for(const p of PLANETS){
+        const a=p.angle*Math.PI/180;
+        const pp=project(p.distance*Math.cos(a),p.size+1.2,-p.distance*Math.sin(a));
+        if(pp) ctx.fillText(p.name,pp.x,pp.y);
+      }
+      ctx.restore();
+    }
+
+    // draw_hud() — ui.py: 2-D ortho overlay (gluOrtho2D screen-space text)
+    function drawHUD(){
+      ctx.save();
+      ctx.font='bold 14px "Orbitron",monospace';
+      ctx.fillStyle='rgba(245,166,35,0.95)';
+      ctx.textAlign='left';
+      ctx.fillText('Solar System Simulation',14,26);
+      ctx.font='10px "Exo 2",sans-serif';
+      ctx.fillStyle='rgba(200,200,224,0.75)';
+      ctx.fillText('8 Planets  \u2022  Saturn Rings  \u2022  Earth Moon  \u2022  Asteroid Belt  \u2022  Nebulae',14,42);
+      ctx.fillStyle='rgba(120,120,145,0.65)';
+      ctx.fillText('Zoom: +/-   Orbit: \u2190\u2191\u2192\u2193   P: Pause   R: Reset',14,56);
+      ctx.fillStyle='rgba(90,90,110,0.6)';
+      ctx.fillText('Click canvas to enable keyboard controls',14,CH-12);
+      if(paused){
+        ctx.font='bold 20px "Orbitron",monospace';
+        ctx.fillStyle='rgba(255,25,25,0.92)';
+        ctx.textAlign='center';
+        ctx.fillText('[ PAUSED ]',CW/2,CH/2);
+      }
+      ctx.restore();
+    }
+
+    // ================================================================
+    // MAIN DISPLAY LOOP — mirrors display() from main.py
+    // Order: bg → orbit rings → asteroids → sun → planets (depth-sorted) → labels → HUD
+    // ================================================================
+    let lastT=null;
+
+    function display(ts){
+      const dt=lastT===null?0:(ts-lastT)/1000; lastT=ts;
+      if(!paused) updatePlanets(dt * speedMult);
+
+      // ── Build View + Projection matrices (camera.py + main.py reshape) ──
+      const ax=cam.angle_x*Math.PI/180, ay=cam.angle_y*Math.PI/180;
+      const ex=cam.distance*Math.cos(ax)*Math.sin(ay);
+      const ey=cam.distance*Math.sin(ax);
+      const ez=cam.distance*Math.cos(ax)*Math.cos(ay);
+      VIEW=m4.lookAt(ex,ey,ez);
+      VP=m4.mul(m4.persp(45,CW/CH,0.1,1200),VIEW);
+
+      // ── glClearColor(0,0,0.02,1) ──
+      ctx.fillStyle='#000005'; ctx.fillRect(0,0,CW,CH);
+
+      // ── Background (draw_starfield + draw_nebula) ──
+      drawStarfield();
+      drawNebula();
+
+      // ── Orbit guide rings ──
+      for(const p of PLANETS) drawOrbitRing(p.distance,p.color);
+
+      // ── Asteroid belt (between Mars r=17 and Jupiter r=24) ──
+      drawAsteroidBelt();
+
+      // ── Sun (at origin, GL_LIGHT0 position) ──
+      drawSun();
+
+      // ── Depth-sort planets — Painter's Algorithm replacing GL_DEPTH_TEST ──
+      const sorted=PLANETS.map(p=>{
+        const a=p.angle*Math.PI/180;
+        return{p,ez:eyeZ(p.distance*Math.cos(a),0,-p.distance*Math.sin(a))};
+      }).sort((a,b)=>a.ez-b.ez); // most negative (farthest) first
+
+      for(const{p} of sorted){
+        const pmat=planetMatrix(p);
+        const [wx,wy,wz]=localToWorld(pmat,0,0,0);
+        const pez=eyeZ(wx,wy,wz);
+
+        // Saturn rings — back half (glDepthMask(GL_FALSE) trick)
+        if(p.name==='Saturn') drawSaturnRingHalf(pmat,p.size,false,pez);
+
+        // Moon behind planet
+        if(p.moon){
+          const ma=p.moon.angle*Math.PI/180;
+          const[mx,my,mz]=localToWorld(pmat,p.moon.distance*Math.cos(ma),0,p.moon.distance*Math.sin(ma));
+          if(eyeZ(mx,my,mz)<pez) drawMoon(p.moon,pmat);
+        }
+
+        // Atmosphere (translucent shell — glBlendFunc)
+        if(ATM[p.name]){
+          const pp=project(wx,wy,wz);
+          if(pp) drawAtmosphere(p.name,pp.x,pp.y,Math.max(2,scaleAt(wx,wy,wz)*p.size));
+        }
+
+        // Planet body (Phong lighting via gradient)
+        drawPlanetBody(p,pmat);
+
+        // Saturn rings — front half
+        if(p.name==='Saturn') drawSaturnRingHalf(pmat,p.size,true,pez);
+
+        // Moon in front of planet
+        if(p.moon){
+          const ma=p.moon.angle*Math.PI/180;
+          const[mx,my,mz]=localToWorld(pmat,p.moon.distance*Math.cos(ma),0,p.moon.distance*Math.sin(ma));
+          if(eyeZ(mx,my,mz)>=pez) drawMoon(p.moon,pmat);
+        }
+      }
+
+      // ── 2-D ortho overlay: labels + HUD (gluOrtho2D in ui.py) ──
+      drawLabels();
+      drawHUD();
+
+      requestAnimationFrame(display);
+    }
+
+    // ================================================================
+    // KEYBOARD CONTROLS — mirrors keyboard_handler() + special_keys_handler()
+    // from camera.py (ESC/P/R/+/- and arrow keys)
+    // ================================================================
+    canvas.addEventListener('keydown',e=>{
+      switch(e.key){
+        case 'p': case 'P': paused=!paused; break;
+        case 'r': case 'R': cam.distance=60;cam.angle_x=20;cam.angle_y=0; break;
+        case '+': case '=': cam.distance=Math.max(10,cam.distance-3); break;
+        case '-': case '_': cam.distance=Math.min(150,cam.distance+3); break;
+        case 'ArrowUp':    cam.angle_x=Math.max(-89,cam.angle_x-3);e.preventDefault();break;
+        case 'ArrowDown':  cam.angle_x=Math.min( 89,cam.angle_x+3);e.preventDefault();break;
+        case 'ArrowLeft':  cam.angle_y-=3; e.preventDefault(); break;
+        case 'ArrowRight': cam.angle_y+=3; e.preventDefault(); break;
+      }
+    });
+    canvas.addEventListener('click',()=>canvas.focus());
+
+    // Speed slider — mirrors the Slow/Normal/Fast menu from ui.py
+    const slider = document.getElementById('speed-slider');
+    const speedLabel = document.getElementById('speed-label');
+    slider.addEventListener('input', () => {
+      speedMult = parseFloat(slider.value);
+      speedLabel.textContent = speedMult.toFixed(1) + '\u00d7';
+      const pct = ((speedMult - 0.1) / (5 - 0.1) * 100).toFixed(1) + '%';
+      slider.style.setProperty('--val', pct);
+    });
+
+    // Kick off the animation loop (glutTimerFunc equivalent)
+    requestAnimationFrame(display);
+  })();
+  </script>
+
+</body>
+</html>
